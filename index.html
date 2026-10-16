@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sentinel — Portfolio intelligence pour fonds VC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #FAFAF7; --surface: #FFFFFF; --surface-2: #F4F2EC;
+  --border: #E8E5DD; --border-strong: #D6D2C6;
+  --text: #0F172A; --text-2: #4B5563; --text-3: #8B8579;
+  --accent: #0F172A; --gold: #FBBF24;
+  --healthy: #166534; --healthy-bg: #DCFCE7;
+  --watch: #92400E; --watch-bg: #FEF3C7;
+  --alert: #991B1B; --alert-bg: #FEE2E2;
+  --info: #1E40AF; --info-bg: #DBEAFE;
+  --radius: 8px; --radius-lg: 12px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); color: var(--text); font-family: 'Public Sans', sans-serif; font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+.tabular, .mono { font-variant-numeric: tabular-nums; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+.serif { font-family: 'Newsreader', serif; }
+button, input { font-family: inherit; font-size: inherit; color: inherit; border: none; background: none; outline: none; }
+a { color: inherit; text-decoration: none; }
+
+.app { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+
+/* Sidebar */
+.sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 18px 12px; position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; }
+.brand { padding: 6px 10px; margin-bottom: 22px; }
+.brand-wordmark { display: block; width: 100%; max-width: 175px; height: auto; }
+
+.fund-switcher { margin: 0 6px 18px; padding: 10px; background: var(--surface-2); border-radius: var(--radius); border: 1px solid var(--border); cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.15s; }
+.fund-switcher:hover { background: #EDEAE2; }
+.fund-mark { width: 26px; height: 26px; background: linear-gradient(135deg, #475569, #1E293B); border-radius: 5px; display: grid; place-items: center; color: white; font-weight: 600; font-size: 11px; }
+.fund-info { flex: 1; min-width: 0; }
+.fund-name { font-weight: 600; font-size: 13px; line-height: 1.2; }
+.fund-meta { color: var(--text-3); font-size: 11px; margin-top: 1px; }
+
+.nav-label { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-3); padding: 8px 14px 6px; margin-top: 4px; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 7px 12px; border-radius: 6px; color: var(--text-2); font-weight: 500; font-size: 13.5px; cursor: pointer; transition: background 0.12s, color 0.12s; margin: 1px 0; }
+.nav-item:hover { background: var(--surface-2); color: var(--text); }
+.nav-item.active { background: var(--accent); color: white; }
+.nav-item.active .nav-count { background: rgba(255,255,255,0.18); color: white; }
+.nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+.nav-count { margin-left: auto; background: var(--surface-2); color: var(--text-2); border-radius: 999px; padding: 1px 7px; font-size: 11px; font-weight: 600; }
+
+.sidebar-footer { margin-top: auto; padding: 10px 6px 4px; border-top: 1px solid var(--border); }
+.user-card { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 6px; cursor: pointer; transition: background 0.12s; }
+.user-card:hover { background: var(--surface-2); }
+.avatar { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #FBBF24, #B45309); display: grid; place-items: center; color: white; font-weight: 600; font-size: 11.5px; flex-shrink: 0; }
+.user-info { flex: 1; min-width: 0; }
+.user-name { font-weight: 600; font-size: 13px; line-height: 1.2; }
+.user-role { color: var(--text-3); font-size: 11px; margin-top: 1px; }
+
+/* Main */
+.main { display: flex; flex-direction: column; min-width: 0; }
+.topbar { height: 56px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.85); backdrop-filter: saturate(140%) blur(8px); display: flex; align-items: center; padding: 0 24px; gap: 16px; position: sticky; top: 0; z-index: 10; }
+.search { flex: 1; max-width: 480px; display: flex; align-items: center; gap: 10px; background: var(--surface-2); border: 1px solid transparent; border-radius: var(--radius); padding: 7px 12px; color: var(--text-3); cursor: text; }
+.search input { flex: 1; background: transparent; }
+.search input::placeholder { color: var(--text-3); }
+.shortcut { font-size: 11px; color: var(--text-3); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; background: white; }
+
+.period-selector { display: flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
+.period-selector button { padding: 6px 11px; font-size: 12.5px; font-weight: 500; color: var(--text-2); cursor: pointer; border-right: 1px solid var(--border); }
+.period-selector button:last-child { border-right: none; }
+.period-selector button.active { background: var(--accent); color: white; }
+.period-selector button:hover:not(.active) { background: var(--surface-2); }
+
+.icon-btn { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 6px; cursor: pointer; color: var(--text-2); position: relative; transition: background 0.12s; }
+.icon-btn:hover { background: var(--surface-2); color: var(--text); }
+.icon-btn .badge { position: absolute; top: 4px; right: 4px; width: 7px; height: 7px; background: var(--alert); border-radius: 50%; border: 2px solid var(--surface); }
+
+.btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 6px; font-weight: 500; font-size: 13px; cursor: pointer; transition: background 0.12s, color 0.12s; border: 1px solid transparent; }
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover { background: #1E293B; }
+.btn-ghost { background: var(--surface); border-color: var(--border); color: var(--text); }
+.btn-ghost:hover { background: var(--surface-2); border-color: var(--border-strong); }
+.btn svg { width: 14px; height: 14px; }
+
+.content { padding: 28px 32px 80px; max-width: 1480px; width: 100%; margin: 0 auto; transition: opacity 0.18s ease; }
+
+.page-header { margin-bottom: 24px; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+.page-eyebrow { font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-3); margin-bottom: 6px; }
+.page-title { font-family: 'Newsreader', serif; font-size: 30px; font-weight: 500; letter-spacing: -0.01em; line-height: 1.1; }
+.page-subtitle { margin-top: 8px; color: var(--text-2); font-size: 14.5px; max-width: 720px; }
+
+/* KPI strip */
+.kpi-strip { display: grid; grid-template-columns: repeat(4, 1fr); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-bottom: 24px; overflow: hidden; }
+.kpi-cell { padding: 18px 22px; border-right: 1px solid var(--border); }
+.kpi-cell:last-child { border-right: none; }
+.kpi-label { font-size: 12px; font-weight: 500; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; }
+.kpi-value { font-family: 'Newsreader', serif; font-size: 28px; font-weight: 500; letter-spacing: -0.01em; margin-top: 6px; line-height: 1.1; }
+.kpi-meta { font-size: 12.5px; color: var(--text-2); margin-top: 4px; }
+.kpi-trend.up { color: var(--healthy); font-weight: 600; }
+.kpi-trend.down { color: var(--alert); font-weight: 600; }
+.kpi-trend.neutral { color: var(--text-3); }
+
+/* Banner */
+.banner { display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-radius: var(--radius-lg); margin-bottom: 22px; background: var(--alert-bg); border: 1px solid #FCA5A5; }
+.banner-icon { width: 36px; height: 36px; background: white; border-radius: 8px; display: grid; place-items: center; color: var(--alert); flex-shrink: 0; }
+.banner-body { flex: 1; }
+.banner-title { font-weight: 600; font-size: 14px; }
+.banner-desc { color: var(--text-2); font-size: 13px; margin-top: 2px; }
+
+/* Filter chips */
+.filter-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.chip { padding: 5px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: white; color: var(--text-2); transition: all 0.12s; }
+.chip:hover { background: var(--surface-2); }
+.chip.active { background: var(--accent); border-color: var(--accent); color: white; }
+.chip-count { color: var(--text-3); margin-left: 4px; font-weight: 400; }
+.chip.active .chip-count { color: rgba(255,255,255,0.6); }
+
+/* Portfolio grid */
+.portfolio-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.portco-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px; cursor: pointer; transition: transform 0.15s ease-out, box-shadow 0.15s, border-color 0.15s; position: relative; overflow: hidden; }
+.portco-card:hover { transform: translateY(-1px); box-shadow: 0 4px 6px -1px rgba(15,23,42,0.08); border-color: var(--border-strong); }
+.portco-card.alert::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--alert); }
+.portco-card.watch::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--watch); }
+
+.portco-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.portco-id { display: flex; align-items: center; gap: 10px; }
+.portco-mark { width: 36px; height: 36px; border-radius: 8px; display: grid; place-items: center; color: white; font-family: 'Newsreader', serif; font-weight: 600; font-size: 15px; flex-shrink: 0; }
+.portco-name { font-weight: 600; font-size: 14.5px; line-height: 1.2; }
+.portco-meta { color: var(--text-3); font-size: 11.5px; margin-top: 2px; }
+.status-pill { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; padding: 3px 8px; border-radius: 999px; background: var(--healthy-bg); color: var(--healthy); white-space: nowrap; }
+.status-pill.watch { background: var(--watch-bg); color: var(--watch); }
+.status-pill.alert { background: var(--alert-bg); color: var(--alert); }
+.portco-body { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.metric-label { font-size: 11px; font-weight: 500; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; }
+.metric-value { font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 16px; margin-top: 3px; letter-spacing: -0.01em; }
+.metric-delta { font-size: 11.5px; font-weight: 600; margin-top: 1px; }
+.metric-delta.up { color: var(--healthy); }
+.metric-delta.down { color: var(--alert); }
+.metric-delta.flat { color: var(--text-3); }
+.portco-spark { margin: 8px -2px 0; height: 36px; }
+.portco-foot { display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; color: var(--text-3); border-top: 1px solid var(--border); padding-top: 10px; margin-top: 6px; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--healthy); display: inline-block; margin-right: 5px; }
+.dot.amber { background: #D97706; }
+.dot.red { background: var(--alert); }
+
+/* Detail */
+.detail-head { display: flex; align-items: flex-start; gap: 18px; margin-bottom: 24px; }
+.detail-mark { width: 64px; height: 64px; border-radius: 14px; display: grid; place-items: center; color: white; font-family: 'Newsreader', serif; font-weight: 600; font-size: 28px; flex-shrink: 0; }
+.detail-info { flex: 1; }
+.detail-name { font-family: 'Newsreader', serif; font-size: 30px; font-weight: 500; letter-spacing: -0.018em; line-height: 1.1; }
+.detail-tagline { color: var(--text-2); margin-top: 4px; font-size: 14px; }
+.detail-tags { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.tag { padding: 3px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 500; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-2); }
+
+.investment-summary { display: grid; grid-template-columns: repeat(5, 1fr); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-bottom: 22px; overflow: hidden; }
+.investment-summary .kpi-cell { padding: 14px 18px; }
+.investment-summary .kpi-value { font-size: 22px; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.card-head { padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+.card-title { font-weight: 600; font-size: 14px; }
+.card-body { padding: 18px; }
+.chart-stage { padding: 18px 22px 8px; }
+
+.detail-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; margin-bottom: 22px; }
+@media (max-width: 1100px) { .detail-grid { grid-template-columns: 1fr; } }
+
+/* Cap table */
+.cap-table { width: 100%; }
+.cap-table th, .cap-table td { padding: 9px 12px; text-align: left; font-size: 12.5px; border-bottom: 1px solid var(--border); }
+.cap-table th { font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; font-size: 10.5px; background: var(--surface-2); }
+.cap-table td.num { font-family: 'JetBrains Mono', monospace; text-align: right; }
+
+/* Generic table */
+.table-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.row { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; cursor: pointer; transition: background 0.12s; }
+.row:last-child { border-bottom: none; }
+.row:hover { background: var(--surface-2); }
+
+/* LP letter */
+.lp-letter { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 48px 64px; font-family: 'Newsreader', Georgia, serif; font-size: 15.5px; line-height: 1.75; max-width: 820px; margin: 0 auto; }
+.lp-letter h2 { font-size: 26px; font-weight: 500; letter-spacing: -0.014em; margin-bottom: 6px; }
+.lp-letter .lp-period { color: var(--text-3); font-family: 'Public Sans', sans-serif; font-size: 13px; margin-bottom: 32px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; }
+.lp-letter p { margin-bottom: 16px; }
+.lp-letter h3 { font-size: 18px; font-weight: 500; margin: 32px 0 8px; letter-spacing: -0.015em; }
+.lp-stat-row { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 18px 0; margin: 24px 0; font-family: 'Public Sans', sans-serif; }
+.lp-stat-cell { text-align: center; }
+.lp-stat-label { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500; }
+.lp-stat-val { font-family: 'Newsreader', serif; font-size: 22px; font-weight: 500; margin-top: 4px; }
+.lp-actions { display: flex; gap: 10px; margin-bottom: 18px; }
+
+/* Settings */
+.settings-grid { display: grid; grid-template-columns: 220px 1fr; gap: 28px; }
+.settings-nav-item { padding: 9px 12px; border-radius: 6px; font-size: 13.5px; font-weight: 500; color: var(--text-2); cursor: pointer; }
+.settings-nav-item.active { background: var(--surface-2); color: var(--text); }
+.settings-nav-item:hover:not(.active) { background: var(--surface-2); }
+
+/* Toast */
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--accent); color: white; padding: 12px 20px; border-radius: 10px; font-size: 13px; font-weight: 500; box-shadow: 0 8px 24px rgba(15,23,42,0.2); opacity: 0; transition: opacity 0.2s, transform 0.2s; z-index: 200; pointer-events: none; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Guide tooltip */
+.guide { position: fixed; bottom: 24px; right: 24px; width: 320px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px 14px; box-shadow: 0 16px 40px -10px rgba(15,23,42,0.18), 0 4px 8px rgba(15,23,42,0.06); z-index: 150; transform: translateY(8px); opacity: 0; transition: opacity 0.25s ease, transform 0.25s ease; }
+.guide.show { opacity: 1; transform: translateY(0); }
+.guide-step { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-3); margin-bottom: 4px; }
+.guide-title { font-family: 'Newsreader', serif; font-size: 19px; font-weight: 500; letter-spacing: -0.01em; line-height: 1.2; margin-bottom: 8px; color: var(--text); }
+.guide-desc { font-size: 13px; line-height: 1.55; color: var(--text-2); margin-bottom: 14px; }
+.guide-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.guide-dots { display: flex; gap: 5px; flex-shrink: 0; }
+.guide-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border-strong); transition: background 0.15s; }
+.guide-dot.active { background: var(--accent); }
+.guide-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.guide-btn { font-size: 12.5px; font-weight: 500; padding: 6px 10px; border-radius: 6px; cursor: pointer; transition: background 0.12s; white-space: nowrap; }
+.guide-btn.ghost { color: var(--text-2); }
+.guide-btn.ghost:hover { color: var(--text); background: var(--surface-2); }
+.guide-btn.primary { background: var(--accent); color: white; font-weight: 600; }
+.guide-btn.primary:hover { background: #1E293B; }
+.guide-reopen { position: fixed; bottom: 24px; right: 24px; width: 42px; height: 42px; border-radius: 50%; background: var(--accent); color: white; display: none; place-items: center; cursor: pointer; box-shadow: 0 8px 20px rgba(15,23,42,0.22); z-index: 150; transition: transform 0.15s; }
+.guide-reopen.show { display: grid; }
+.guide-reopen:hover { transform: translateY(-2px); }
+
+/* Notifications dropdown */
+.notif-dropdown { position: absolute; top: 50px; right: 0; width: 360px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 16px 40px -10px rgba(15,23,42,0.22); z-index: 100; opacity: 0; pointer-events: none; transform: translateY(-6px); transition: opacity 0.15s, transform 0.15s; }
+.notif-dropdown.open { opacity: 1; pointer-events: auto; transform: translateY(0); }
+.notif-head { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.notif-row { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; gap: 11px; cursor: pointer; transition: background 0.12s; }
+.notif-row:hover { background: var(--surface-2); }
+.notif-row:last-child { border-bottom: none; }
+.notif-dot-sev { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
+.notif-time { font-size: 11px; color: var(--text-3); margin-top: 3px; }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.42); backdrop-filter: blur(2px); z-index: 300; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; }
+.modal-overlay.open { display: flex; opacity: 1; }
+.modal { background: var(--surface); border-radius: 14px; width: 100%; max-width: 580px; max-height: 88vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(15,23,42,0.32); transform: translateY(8px); transition: transform 0.2s; }
+.modal-overlay.open .modal { transform: translateY(0); }
+.modal-head { padding: 18px 22px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.modal-title { font-family: 'Newsreader', serif; font-size: 22px; font-weight: 500; letter-spacing: -0.015em; }
+.modal-close { width: 30px; height: 30px; border-radius: 6px; cursor: pointer; display: grid; place-items: center; color: var(--text-2); transition: background 0.12s; }
+.modal-close:hover { background: var(--surface-2); color: var(--text); }
+.modal-body { padding: 22px; overflow-y: auto; flex: 1; }
+.modal-foot { padding: 14px 22px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+
+@media (max-width: 800px) { .app { grid-template-columns: 1fr; } .sidebar { display: none; } .investment-summary, .kpi-strip { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <svg class="brand-wordmark" width="170" height="44" viewBox="0 0 170 44" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="brandLightGlow"><stop offset="0%" stop-color="#FBBF24" stop-opacity="1"/><stop offset="25%" stop-color="#FBBF24" stop-opacity="0.7"/><stop offset="60%" stop-color="#FBBF24" stop-opacity="0.18"/><stop offset="100%" stop-color="#FBBF24" stop-opacity="0"/></radialGradient>
+        </defs>
+        <text id="brand-text" x="0" y="36" font-family="Newsreader, serif" font-size="38" font-weight="500" fill="#0F172A" letter-spacing="-0.5">Sentinel</text>
+        <g id="brand-light">
+          <circle cx="68" cy="13" r="5" fill="#FFFFFF"/>
+          <circle cx="68" cy="13" r="11" fill="url(#brandLightGlow)"/>
+          <circle cx="68" cy="13" r="2.6" fill="#FBBF24"/>
+        </g>
+      </svg>
+    </div>
+
+    <div class="fund-switcher" onclick="openModal('fund-switcher')">
+      <div class="fund-mark">SE</div>
+      <div class="fund-info">
+        <div class="fund-name">Sequoia Émergence</div>
+        <div class="fund-meta">Fund III · €120M</div>
+      </div>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-3)"><polyline points="6 9 12 15 18 9"></polyline></svg>
+    </div>
+
+    <div class="nav-label">Pilotage</div>
+    <div class="nav-item active" data-view="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+      Portefeuille
+      <span class="nav-count">25</span>
+    </div>
+    <div class="nav-item" data-view="inbox">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>
+      Boîte de réception
+      <span class="nav-count">7</span>
+    </div>
+    <div class="nav-item" data-view="anomalies">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+      Alertes
+      <span class="nav-count" style="background:var(--alert-bg);color:var(--alert)">3</span>
+    </div>
+
+    <div class="nav-label">Reporting</div>
+    <div class="nav-item" data-view="lp-report">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+      Rapport LP
+    </div>
+    <div class="nav-item" data-view="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle></svg>
+      Paramètres
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-card" onclick="openModal('user-menu')">
+        <div class="avatar">NR</div>
+        <div class="user-info">
+          <div class="user-name">Nicolas Raoul-Duval</div>
+          <div class="user-role">Investment Associate</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" id="search-input" placeholder="Rechercher portco, transaction, KPI…" />
+        <span class="shortcut">⌘K</span>
+      </div>
+      <div style="flex:1"></div>
+      <div class="period-selector" id="period-selector">
+        <button data-period="month">Mois</button>
+        <button class="active" data-period="quarter">Trimestre</button>
+        <button data-period="year">Année</button>
+      </div>
+      <div style="position:relative">
+        <div class="icon-btn" id="notif-trigger" onclick="toggleNotifDropdown(event)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+          <span class="badge"></span>
+        </div>
+        <div class="notif-dropdown" id="notif-dropdown" onclick="event.stopPropagation()">
+          <div class="notif-head">
+            <div style="font-weight:600;font-size:14px">Notifications</div>
+            <span style="font-size:12px;color:var(--text-3);cursor:pointer" onclick="showToast('Toutes marquées comme lues')">Tout marquer lu</span>
+          </div>
+          <div id="notif-body"></div>
+          <div style="padding:10px 16px;border-top:1px solid var(--border);text-align:center"><span style="font-size:12.5px;color:var(--accent);font-weight:500;cursor:pointer" onclick="navigate('anomalies');closeNotifDropdown()">Voir toutes les alertes →</span></div>
+        </div>
+      </div>
+      <button class="btn btn-ghost" onclick="openModal('export')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        Exporter
+      </button>
+      <button class="btn btn-primary" onclick="openModal('invite-portco')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        Inviter portco
+      </button>
+    </header>
+
+    <div class="content" id="content"></div>
+  </main>
+</div>
+
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal()"></div>
+
+<script>
+// ============================================================================
+// DATA — Fixed deterministic for professional consistency
+// ============================================================================
+
+const PORTCOS = [
+  { id:'pigeon', name:'Pigeon', tagline:'Logistique B2B last-mile', sector:'Logistique', stage:'Series A', invested:2.5e6, ownership:0.082, valuation:42e6, status:'healthy', arr:[620,696,775,857,940,1018,1095,1180,1265,1352,1445,1540], burn:[180,186,194,201,210,216,223,232,239,247,256,265], headcount:[28,30,32,33,35,38,40,42,44,46,48,50], runway:14.2, cash:4.2e6, lastUpdate:'2 j', notes:'Dépassement plan 2026 sur ARR (+18%). Margin OK.', led:'Daphni' },
+  { id:'alma', name:'Alma Studio', tagline:'Suite IA pour studios créatifs', sector:'Vertical SaaS', stage:'Seed', invested:1.2e6, ownership:0.115, valuation:14e6, status:'healthy', arr:[180,210,245,280,322,370,420,478,540,602,670,740], burn:[90,93,95,97,99,102,105,108,111,114,118,122], headcount:[8,9,10,11,12,13,14,15,17,18,19,21], runway:11.6, cash:1.8e6, lastUpdate:'5 j', notes:'Top of funnel x2 vs Q4. NDR 134%.', led:'Singular' },
+  { id:'borealis', name:'Borealis', tagline:'Software de mesure carbone scope 3', sector:'Climate', stage:'Series A', invested:3.0e6, ownership:0.094, valuation:48e6, status:'watch', arr:[950,985,1015,1042,1075,1108,1140,1167,1195,1218,1245,1268], burn:[220,225,228,230,233,236,238,241,243,246,248,251], headcount:[35,37,38,40,42,45,48,50,53,55,57,58], runway:9.4, cash:5.1e6, lastUpdate:'12 j', notes:'Slowdown commercial sur trimestre. Pipeline T1 à surveiller.', led:'Demeter' },
+  { id:'gardian', name:'Gardian', tagline:'XDR pour PME européennes', sector:'Cybersécurité', stage:'Series A', invested:2.0e6, ownership:0.067, valuation:54e6, status:'healthy', arr:[720,792,872,958,1052,1155,1268,1393,1530,1680,1845,2027], burn:[195,200,205,210,215,221,227,233,239,245,252,259], headcount:[22,24,26,28,31,34,38,42,45,48,52,55], runway:13.8, cash:5.4e6, lastUpdate:'1 j', notes:'Closing Tier 1 attendu fin novembre.', led:'Serena' },
+  { id:'lumio', name:'Lumio', tagline:'Comptabilité augmentée pour CFO de PME', sector:'Fintech B2B', stage:'Seed', invested:1.5e6, ownership:0.103, valuation:18e6, status:'healthy', arr:[310,359,415,479,553,638,738,852,985,1138,1316,1521], burn:[110,113,116,119,122,125,128,132,135,139,143,147], headcount:[12,13,14,16,17,19,21,23,25,27,29,31], runway:15.2, cash:2.6e6, lastUpdate:'3 j', notes:'Conversion freemium 6.2% (vs 4.1% mois précédent).', led:'Frst' },
+  { id:'cinder', name:'Cinder', tagline:'LLM observability et evals', sector:'AI Infra', stage:'Seed', invested:1.8e6, ownership:0.090, valuation:24e6, status:'healthy', arr:[95,121,156,200,257,330,425,547,704,906,1166,1500], burn:[140,145,151,157,163,170,177,184,191,199,207,215], headcount:[7,8,9,10,12,13,15,17,18,20,22,24], runway:10.8, cash:1.4e6, lastUpdate:'4 j', notes:'Hyper-croissance MRR. Lever pré-Series A en cours.', led:'Kima Ventures' },
+  { id:'tendre', name:'Tendre', tagline:'DTC alimentation infantile bio', sector:'Consumer', stage:'Seed', invested:0.8e6, ownership:0.078, valuation:9e6, status:'alert', arr:[420,415,408,398,390,378,365,352,338,322,308,295], burn:[135,138,140,141,142,143,143,143,142,141,139,137], headcount:[18,19,20,20,21,22,21,21,20,19,19,18], runway:5.1, cash:680e3, lastUpdate:'21 j', notes:'CAC en hausse. Runway sous 6 mois. Bridge à anticiper.', led:'Kima Ventures' },
+  { id:'maillon', name:'Maillon', tagline:'TMS pour transporteurs régionaux', sector:'Vertical SaaS', stage:'Seed', invested:1.0e6, ownership:0.085, valuation:13e6, status:'healthy', arr:[265,294,326,362,401,445,494,548,609,675,749,831], burn:[95,97,99,101,103,105,108,110,112,114,117,119], headcount:[10,11,12,13,14,15,16,17,18,20,21,22], runway:14.5, cash:1.5e6, lastUpdate:'6 j', notes:'Net revenue retention 108%. Expansion EU.', led:'Iris Capital' },
+  { id:'frette', name:'Frette', tagline:'Hardware de tracking industriel', sector:'IoT', stage:'Series A', invested:2.8e6, ownership:0.077, valuation:52e6, status:'watch', arr:[810,825,840,855,872,888,906,924,943,962,983,1004], burn:[245,253,260,268,275,283,291,299,308,317,326,335], headcount:[40,42,44,46,48,50,52,54,55,57,58,60], runway:8.7, cash:5.6e6, lastUpdate:'9 j', notes:'Pénurie composants → retard livraison T4.', led:'Elaia' },
+  { id:'nucleo', name:'Nucléo', tagline:'Dossier patient augmenté', sector:'HealthTech', stage:'Seed', invested:1.4e6, ownership:0.092, valuation:17e6, status:'healthy', arr:[190,217,247,282,322,367,419,478,545,621,708,807], burn:[115,117,120,122,125,128,131,134,137,140,143,146], headcount:[14,15,16,17,18,20,21,23,24,26,27,29], runway:12.4, cash:2.1e6, lastUpdate:'7 j', notes:'CHU Lyon signé. Pipeline 5 hôpitaux.', led:'Karista' },
+  { id:'vergence', name:'Vergence', tagline:'Vision IA pour ligne de production', sector:'AI Vertical', stage:'Seed', invested:1.6e6, ownership:0.099, valuation:19e6, status:'healthy', arr:[220,253,291,335,386,444,510,587,675,776,892,1026], burn:[125,128,132,136,140,144,148,153,157,162,167,172], headcount:[11,12,13,14,16,17,19,21,22,24,26,28], runway:13.2, cash:2.3e6, lastUpdate:'4 j', notes:'Pilote Renault converti en contrat 3 ans.', led:'Daphni' },
+  { id:'cap-vertu', name:'Cap Vertu', tagline:'Reporting ESG SFDR Article 9', sector:'Climate', stage:'Seed', invested:1.1e6, ownership:0.095, valuation:14e6, status:'watch', arr:[145,157,170,184,199,215,232,250,269,290,312,336], burn:[100,103,105,108,111,114,117,120,124,127,131,135], headcount:[9,10,11,12,12,13,13,14,14,15,15,16], runway:7.8, cash:1.05e6, lastUpdate:'14 j', notes:'Sales cycle plus long que prévu.', led:'Frst' },
+  { id:'boussole', name:'Boussole', tagline:'Workflow automation no-code FR', sector:'Horizontal SaaS', stage:'Seed', invested:1.3e6, ownership:0.087, valuation:18e6, status:'healthy', arr:[280,316,357,403,455,514,580,655,740,836,944,1066], burn:[105,107,110,113,116,119,122,126,129,133,137,141], headcount:[12,13,14,15,17,18,20,22,23,25,27,29], runway:14.1, cash:2.0e6, lastUpdate:'2 j', notes:'Partenariat distrib avec Pennylane.', led:'Kima Ventures' },
+  { id:'saumon', name:'Saumon', tagline:'Data warehouse managed pour PME', sector:'Data Infra', stage:'Series A', invested:2.4e6, ownership:0.073, valuation:48e6, status:'healthy', arr:[680,762,853,955,1070,1198,1342,1503,1683,1885,2111,2364], burn:[210,215,221,227,233,239,245,252,259,265,272,279], headcount:[28,30,32,34,36,38,41,43,46,48,51,54], runway:13.6, cash:5.0e6, lastUpdate:'5 j', notes:'NDR 142%. Top quartile.', led:'Partech' },
+  { id:'plume', name:'Plume', tagline:'Outil design collaboratif vertical', sector:'Vertical SaaS', stage:'Seed', invested:1.0e6, ownership:0.080, valuation:15e6, status:'healthy', arr:[165,191,222,257,298,346,401,465,539,625,725,841], burn:[85,87,89,91,93,95,98,100,102,105,108,111], headcount:[8,9,9,10,11,12,13,14,15,16,17,19], runway:13.8, cash:1.6e6, lastUpdate:'8 j', notes:'Logo Engie cette semaine.', led:'Iris Capital' },
+  { id:'perche', name:'Perche', tagline:'CRM vertical pour cabinets de conseil', sector:'Vertical SaaS', stage:'Seed', invested:0.9e6, ownership:0.072, valuation:13.5e6, status:'watch', arr:[195,202,210,218,226,235,244,253,263,273,284,295], burn:[82,84,85,87,89,90,92,94,96,98,100,102], headcount:[9,10,10,11,11,12,12,13,13,13,14,14], runway:9.2, cash:1.1e6, lastUpdate:'18 j', notes:'Croissance ralentit. Équipe sales à renforcer.', led:'Daphni' },
+  { id:'ondine', name:'Ondine', tagline:'Capteurs IoT agriculture irriguée', sector:'AgTech', stage:'Seed', invested:1.2e6, ownership:0.105, valuation:14e6, status:'healthy', arr:[125,146,171,200,234,274,321,375,439,514,601,703], burn:[95,98,101,104,107,110,113,116,120,123,127,131], headcount:[10,11,12,13,14,15,17,18,19,21,22,24], runway:11.5, cash:1.4e6, lastUpdate:'3 j', notes:'Subvention France 2030 obtenue (€800K).', led:'Demeter' },
+  { id:'mirador', name:'Mirador', tagline:'Observabilité APM pour stacks JVM', sector:'DevTools', stage:'Series A', invested:2.6e6, ownership:0.084, valuation:44e6, status:'healthy', arr:[540,615,701,799,910,1037,1182,1347,1535,1750,1995,2275], burn:[180,185,190,195,201,207,213,219,225,232,239,246], headcount:[24,26,28,30,33,35,38,41,44,47,50,53], runway:13.2, cash:4.5e6, lastUpdate:'4 j', notes:'Logo Decathlon (€180K ARR).', led:'Alven' },
+  { id:'truffe', name:'Truffe', tagline:'Marketplace B2B produits gastronomiques', sector:'Marketplace', stage:'Series A', invested:2.2e6, ownership:0.058, valuation:65e6, status:'watch', arr:[880,895,912,928,946,964,983,1002,1022,1043,1064,1086], burn:[265,272,279,287,295,303,311,320,329,338,348,358], headcount:[35,38,40,42,45,48,50,52,54,55,57,58], runway:10.5, cash:6.2e6, lastUpdate:'11 j', notes:'Take rate sous pression. Switch SaaS hybride.', led:'Eurazeo' },
+  { id:'halo', name:'Halo', tagline:'Attribution marketing pour DTC', sector:'MarTech', stage:'Seed', invested:1.1e6, ownership:0.083, valuation:16e6, status:'healthy', arr:[215,243,275,311,352,398,450,509,576,651,737,833], burn:[98,100,102,105,107,110,112,115,118,121,124,127], headcount:[11,12,13,14,15,16,18,19,21,22,24,25], runway:13.8, cash:1.7e6, lastUpdate:'6 j', notes:'Migration iOS17 absorbée sans churn.', led:'Kima Ventures' },
+  { id:'ardoise', name:'Ardoise', tagline:'Plateforme de formation continue ingénieurs', sector:'EdTech', stage:'Seed', invested:0.9e6, ownership:0.085, valuation:9.5e6, status:'alert', arr:[155,152,148,144,140,136,131,126,121,116,111,106], burn:[95,95,95,94,94,93,92,91,90,89,87,85], headcount:[12,12,13,13,12,12,11,11,11,11,10,10], runway:5.8, cash:780e3, lastUpdate:'24 j', notes:'Marché plus difficile. Pivot B2B en cours.', led:'Educapital' },
+  { id:'levee', name:'Levée', tagline:'Onboarding RH automatisé', sector:'HR Tech', stage:'Seed', invested:1.0e6, ownership:0.080, valuation:15e6, status:'healthy', arr:[245,272,302,335,372,413,458,508,564,626,694,770], burn:[92,94,96,98,100,103,105,107,110,113,115,118], headcount:[10,11,12,13,14,15,16,17,18,20,21,22], runway:14.5, cash:1.8e6, lastUpdate:'5 j', notes:'Net dollar retention 119%.', led:'Frst' },
+  { id:'glacier', name:'Glacier', tagline:'Data infra cold-storage souveraine', sector:'Data Infra', stage:'Seed', invested:1.4e6, ownership:0.090, valuation:18e6, status:'healthy', arr:[175,203,235,272,316,366,425,492,571,662,768,890], burn:[105,108,111,114,117,120,123,127,130,134,138,141], headcount:[10,11,12,13,15,16,18,19,21,22,24,26], runway:13.0, cash:2.0e6, lastUpdate:'4 j', notes:'Contrat ministériel (€150K ARR sur 3 ans).', led:'Bpifrance' },
+  { id:'rumeur', name:'Rumeur', tagline:'Audio social pour communautés', sector:'Consumer', stage:'Seed', invested:0.7e6, ownership:0.069, valuation:8e6, status:'alert', arr:[45,46,46,45,44,43,42,40,39,37,35,33], burn:[85,85,85,84,84,83,82,81,80,79,77,75], headcount:[10,10,11,11,11,11,11,10,10,9,9,9], runway:4.2, cash:550e3, lastUpdate:'30 j', notes:'PMF non atteint. Décision arrêt ou pivot.', led:'Kima Ventures' },
+  { id:'vergerie', name:'Vergerie', tagline:'Software gestion exploitations agricoles', sector:'AgTech', stage:'Seed', invested:0.8e6, ownership:0.077, valuation:12e6, status:'healthy', arr:[135,148,162,178,196,215,236,260,286,314,346,381], burn:[75,77,79,81,82,84,86,87,89,91,93,95], headcount:[8,9,9,10,10,11,12,13,13,14,15,16], runway:13.5, cash:1.2e6, lastUpdate:'7 j', notes:'Saisonnalité forte mais trajectoire alignée plan.', led:'Demeter' },
+];
+
+const ANOMALIES = [
+  { sev:'high', co:'Tendre', sector:'Consumer · Seed', desc:'Runway sous 6 mois (5,1) et CAC en hausse de +24% sur le trimestre. Bridge à anticiper.', when:'il y a 2 j' },
+  { sev:'high', co:'Rumeur', sector:'Consumer · Seed', desc:'Pas de signal de PMF après 14 mois. Cash sous €600K, équipe en réduction.', when:'il y a 3 j' },
+  { sev:'high', co:'Ardoise', sector:'EdTech · Seed', desc:'ARR en baisse 2 mois consécutifs (-2% MoM). Pivot B2B annoncé sans plan exécution détaillé.', when:'il y a 5 j' },
+  { sev:'med', co:'Borealis', sector:'Climate · Series A', desc:'Croissance ARR T4 sous plan (+6% vs +12% attendu). Pipeline T1 jugé "fragile".', when:'il y a 4 j' },
+  { sev:'med', co:'Frette', sector:'IoT · Series A', desc:'Pénurie composants génère retards livraison (€340K ARR repoussés au T1).', when:'il y a 9 j' },
+  { sev:'med', co:'Truffe', sector:'Marketplace · Series A', desc:'Take rate en baisse (-0,8 pt). Pivot vers SaaS hybride sans timeline claire.', when:'il y a 11 j' },
+  { sev:'med', co:'Cap Vertu', sector:'Climate · Seed', desc:'Hiring freeze annoncé, runway descendu sous 8 mois.', when:'il y a 14 j' },
+  { sev:'med', co:'Perche', sector:'Vertical SaaS · Seed', desc:'Croissance ARR ralentit (+4% sur 3 derniers mois vs +13% historique).', when:'il y a 18 j' },
+  { sev:'low', co:'Gardian', sector:'Cybersécurité · Series A', desc:'Pas d\'update reçu sur novembre. Relance automatique envoyée.', when:'il y a 1 j' },
+];
+
+const INBOX = [
+  { unread:true, from:'Lumio', who:'Camille Lefebvre · CFO', subject:'Update mensuel novembre — KPI dashboard ci-joint', conf:0.96, attach:'pdf', when:'il y a 3 h' },
+  { unread:true, from:'Cinder', who:'Hugo Bertrand · CEO', subject:'Reporting Q4 + prévisionnel 2026', conf:0.91, attach:'xlsx', when:'il y a 6 h' },
+  { unread:true, from:'Pigeon', who:'Sarah Mehdi · COO', subject:'Update opérations + pipe commercial', conf:0.94, attach:'pdf', when:'il y a 9 h' },
+  { unread:true, from:'Boussole', who:'Antoine Roux · CFO', subject:'Synthèse mensuelle (board pack court)', conf:0.88, attach:'pdf', when:'hier' },
+  { unread:true, from:'Glacier', who:'Inès Aubry · CEO', subject:'KPI novembre + signature contrat ministériel', conf:0.97, attach:'xlsx', when:'hier' },
+  { unread:true, from:'Vergence', who:'Léa Camus · CFO', subject:'Renault → contrat 3 ans signé · update', conf:0.89, attach:'pdf', when:'2 j' },
+  { unread:true, from:'Maillon', who:'Tom Royer · CEO', subject:'Mensuel + retours expansion EU', conf:0.93, attach:'pdf', when:'2 j' },
+];
+
+const PALETTE = [['#1E40AF','#3B82F6'],['#7C2D12','#EA580C'],['#166534','#22C55E'],['#581C87','#A855F7'],['#0F766E','#14B8A6'],['#9D174D','#EC4899'],['#1E1B4B','#6366F1'],['#854D0E','#EAB308'],['#831843','#DB2777'],['#064E3B','#10B981'],['#365314','#84CC16'],['#7F1D1D','#EF4444'],['#172554','#1D4ED8'],['#3F3F46','#71717A'],['#0C4A6E','#0EA5E9']];
+function pal(i) { return PALETTE[i % PALETTE.length]; }
+
+// ============================================================================
+// STATE & HELPERS
+// ============================================================================
+
+let currentPeriod = 'quarter';
+let currentView = 'dashboard';
+
+function deltaLookback() { return currentPeriod === 'month' ? 1 : currentPeriod === 'quarter' ? 3 : 11; }
+function periodShort() { return currentPeriod === 'month' ? '1M' : currentPeriod === 'quarter' ? '3M' : '12M'; }
+function periodSuffix() { return currentPeriod === 'month' ? 'MoM' : currentPeriod === 'quarter' ? 'QoQ' : 'YoY'; }
+function periodLong() { return currentPeriod === 'month' ? 'ce mois' : currentPeriod === 'quarter' ? 'ce trimestre' : 'cette année'; }
+function periodCompareLabel() { return currentPeriod === 'month' ? 'vs M-1' : currentPeriod === 'quarter' ? 'vs T-1' : 'vs N-1'; }
+
+function fmtEur(v) {
+  if (v >= 1e6) return '€' + (v/1e6).toFixed(v >= 10e6 ? 1 : 1) + 'M';
+  if (v >= 1e3) return '€' + Math.round(v/1e3) + 'K';
+  return '€' + v;
+}
+function fmtPct(v) { return (v >= 0 ? '+' : '') + (v*100).toFixed(1).replace('.', ',') + '%'; }
+function pctChange(arr, lookback=1) { const n = arr.length; if (n < lookback + 1) return 0; return (arr[n-1] - arr[n-1-lookback]) / arr[n-1-lookback]; }
+
+// SVG sparkline
+function sparkline(data, w=250, h=36, color='#0F172A') {
+  if (!data || data.length === 0) return '';
+  const min = Math.min(...data), max = Math.max(...data), range = max - min || 1;
+  const stepX = w / (data.length - 1);
+  const points = data.map((v,i) => `${(i*stepX).toFixed(1)},${(h - 4 - ((v-min)/range)*(h-8)).toFixed(1)}`);
+  const fillPts = [`0,${h}`, ...points, `${w},${h}`].join(' ');
+  const last = points[points.length-1].split(',');
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><polygon points="${fillPts}" fill="${color}" opacity="0.07"/><polyline points="${points.join(' ')}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linecap="round"/><circle cx="${last[0]}" cy="${last[1]}" r="2.4" fill="${color}"/></svg>`;
+}
+
+function areaChart(data, w=720, h=240, color='#0F172A') {
+  const padL=46, padR=12, padT=20, padB=32;
+  const cw = w - padL - padR, ch = h - padT - padB;
+  const min = Math.min(...data), max = Math.max(...data), range = max - min || 1;
+  const stepX = cw / (data.length - 1);
+  const points = data.map((v,i) => `${(padL + i*stepX).toFixed(1)},${(padT + ch - ((v-min)/range)*ch).toFixed(1)}`);
+  const yTicks = 4; let gridLines = '', yLabels = '';
+  for (let i = 0; i <= yTicks; i++) {
+    const y = padT + (ch * i / yTicks); const val = max - (range * i / yTicks);
+    gridLines += `<line x1="${padL}" y1="${y}" x2="${w-padR}" y2="${y}" stroke="#E8E5DD" stroke-width="1" ${i===yTicks ? '' : 'stroke-dasharray="3 3"'}/>`;
+    const labelV = val >= 1000 ? (val/1000).toFixed(1) + 'k' : Math.round(val);
+    yLabels += `<text x="${padL-8}" y="${y+4}" text-anchor="end" font-family="JetBrains Mono" font-size="10" fill="#8B8579">€${labelV}</text>`;
+  }
+  const months = ['déc 24','jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov 25'];
+  let xLabels = '';
+  data.forEach((_, i) => {
+    if (i % 2 !== 0 && i < data.length - 1) return;
+    const x = padL + i * stepX;
+    xLabels += `<text x="${x}" y="${h-10}" text-anchor="middle" font-family="Public Sans" font-size="10.5" fill="#8B8579">${months[i] || ''}</text>`;
+  });
+  const fillPts = [`${padL},${h-padB}`, ...points, `${w-padR},${h-padB}`].join(' ');
+  const last = points[points.length-1].split(',');
+  return `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><defs><linearGradient id="grad" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="0.15"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>${gridLines}<polygon points="${fillPts}" fill="url(#grad)"/><polyline points="${points.join(' ')}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round"/><circle cx="${last[0]}" cy="${last[1]}" r="4.5" fill="white" stroke="${color}" stroke-width="2"/>${yLabels}${xLabels}</svg>`;
+}
+
+// ============================================================================
+// REALISTIC FIXED KPI VALUES (PER PERIOD)
+// ============================================================================
+
+// Snapshot fixe au 30 nov 2025 — chiffres pro réalistes pour Fund III €120M
+const FIXED_KPIS = {
+  // Le snapshot est le même (NAV ne change pas chaque jour)
+  // Mais les deltas varient drastiquement selon la période
+  nav: 178.4,        // €178.4M NAV consolidée (2,23× sur €80M déployés)
+  invested: 80.0,    // €80M déployés sur €120M total fund
+  moic: 2.23,
+  arr: 52.8,         // €52.8M ARR agrégé portfolio
+  response: 96,      // 96% taux de réponse
+  responseHistorical: { month: 96, quarter: 94, year: 91 },
+  navDeltaByPeriod: { month: 2.1, quarter: 7.8, year: 31.6 },
+  navPctByPeriod: { month: 1.2, quarter: 4.6, year: 21.5 },
+  moicDeltaByPeriod: { month: 0.04, quarter: 0.12, year: 0.41 },
+  arrDeltaByPeriod: { month: 1.6, quarter: 4.9, year: 14.6 },
+  arrPctByPeriod: { month: 3.1, quarter: 10.2, year: 38.2 },
+  responseRatio: { month: '24 / 25 ce mois', quarter: '73 / 75 ce trimestre', year: '287 / 300 sur 12 mois' },
+  responseExtra: { month: '1 relance auto envoyée', quarter: '2 relances auto envoyées', year: '11 relances · taux moyen 96%' },
+  subtitleDate: { month: 'snapshot au 30 nov 2025', quarter: 'vue trimestrielle au 30 nov 2025', year: 'vue annuelle au 30 nov 2025' }
+};
+
+function periodMetrics() {
+  const p = currentPeriod;
+  return {
+    nav: FIXED_KPIS.nav,
+    moic: FIXED_KPIS.moic,
+    arr: FIXED_KPIS.arr,
+    response: FIXED_KPIS.responseHistorical[p],
+    navDelta: '+€' + FIXED_KPIS.navDeltaByPeriod[p].toFixed(1) + 'M',
+    navPct: '+' + FIXED_KPIS.navPctByPeriod[p].toFixed(1).replace('.', ',') + '%',
+    moicDelta: '+' + FIXED_KPIS.moicDeltaByPeriod[p].toFixed(2).replace('.', ',') + '×',
+    arrDelta: '+€' + FIXED_KPIS.arrDeltaByPeriod[p].toFixed(1) + 'M',
+    arrPct: '+' + FIXED_KPIS.arrPctByPeriod[p].toFixed(1).replace('.', ',') + '%',
+    responseRatio: FIXED_KPIS.responseRatio[p],
+    responseExtra: FIXED_KPIS.responseExtra[p],
+    subtitleDate: FIXED_KPIS.subtitleDate[p]
+  };
+}
+
+// ============================================================================
+// VIEWS
+// ============================================================================
+
+function renderDashboard() {
+  const pm = periodMetrics();
+  const healthyCount = PORTCOS.filter(p => p.status === 'healthy').length;
+  const watchCount = PORTCOS.filter(p => p.status === 'watch').length;
+  const alertCount = PORTCOS.filter(p => p.status === 'alert').length;
+
+  return `
+    <div class="page-header">
+      <div>
+        <div class="page-eyebrow">Sequoia Émergence · Fund III</div>
+        <div class="page-title">Portefeuille</div>
+        <div class="page-subtitle">25 sociétés · €120M de fonds · ${pm.subtitleDate}. Données ingérées automatiquement depuis les updates portcos.</div>
+      </div>
+    </div>
+
+    <div class="kpi-strip">
+      <div class="kpi-cell">
+        <div class="kpi-label">NAV consolidée</div>
+        <div class="kpi-value tabular">€${pm.nav.toFixed(1)}M</div>
+        <div class="kpi-meta"><span class="kpi-trend up">${pm.navDelta}</span> ${periodLong()} <span class="kpi-trend neutral">·</span> ${pm.navPct}</div>
+      </div>
+      <div class="kpi-cell">
+        <div class="kpi-label">MOIC brute</div>
+        <div class="kpi-value tabular">${pm.moic.toFixed(2).replace('.', ',')}×</div>
+        <div class="kpi-meta"><span class="kpi-trend up">${pm.moicDelta}</span> ${periodCompareLabel()}</div>
+      </div>
+      <div class="kpi-cell">
+        <div class="kpi-label">ARR portfolio agrégé</div>
+        <div class="kpi-value tabular">€${pm.arr.toFixed(1)}M</div>
+        <div class="kpi-meta"><span class="kpi-trend up">${pm.arrDelta}</span> ${periodLong()} <span class="kpi-trend neutral">·</span> ${pm.arrPct} ${periodSuffix()}</div>
+      </div>
+      <div class="kpi-cell">
+        <div class="kpi-label">Taux de réponse portcos</div>
+        <div class="kpi-value tabular">${pm.response}%</div>
+        <div class="kpi-meta">${pm.responseRatio} <span class="kpi-trend neutral">·</span> ${pm.responseExtra}</div>
+      </div>
+    </div>
+
+    <div class="banner">
+      <div class="banner-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+      </div>
+      <div class="banner-body">
+        <div class="banner-title">3 alertes critiques cette semaine</div>
+        <div class="banner-desc">Tendre, Rumeur et Ardoise présentent des signaux de risque (runway court, ARR en baisse). Décisions à prendre avant le board du 12 décembre.</div>
+      </div>
+      <button class="btn btn-ghost" onclick="navigate('anomalies')">Voir alertes</button>
+    </div>
+
+    <div class="filter-row">
+      <span class="chip active" data-filter="all">Toutes <span class="chip-count">25</span></span>
+      <span class="chip" data-filter="healthy">En bonne santé <span class="chip-count">${healthyCount}</span></span>
+      <span class="chip" data-filter="watch">À surveiller <span class="chip-count">${watchCount}</span></span>
+      <span class="chip" data-filter="alert">À risque <span class="chip-count">${alertCount}</span></span>
+      <span style="flex:1"></span>
+      <span class="chip" onclick="showToast('Tri : ARR décroissant')">Trier : ARR</span>
+    </div>
+
+    <div class="portfolio-grid" id="portfolio-grid">
+      ${PORTCOS.map((p,i) => renderPortcoCard(p, i)).join('')}
+    </div>
+  `;
+}
+
+function renderPortcoCard(p, i) {
+  const [c1, c2] = pal(i);
+  const initial = p.name.replace(/[^A-Za-zÀ-ÿ]/g, '').slice(0,2);
+  const arrChange = pctChange(p.arr, deltaLookback());
+  const lastArr = p.arr[p.arr.length-1];
+  const trendClass = arrChange > 0.05 ? 'up' : arrChange < -0.03 ? 'down' : 'flat';
+  const sparkWindow = currentPeriod === 'month' ? p.arr.slice(-3) : currentPeriod === 'quarter' ? p.arr.slice(-6) : p.arr;
+
+  return `
+    <div class="portco-card ${p.status}" onclick="navigate('detail', '${p.id}')">
+      <div class="portco-head">
+        <div class="portco-id">
+          <div class="portco-mark" style="background:linear-gradient(135deg, ${c1}, ${c2})">${initial}</div>
+          <div>
+            <div class="portco-name">${p.name}</div>
+            <div class="portco-meta">${p.sector} · ${p.stage}</div>
+          </div>
+        </div>
+        <span class="status-pill ${p.status}">${p.status === 'healthy' ? 'OK' : p.status === 'watch' ? 'Surveillance' : 'Risque'}</span>
+      </div>
+      <div class="portco-body">
+        <div>
+          <div class="metric-label">ARR (M-1)</div>
+          <div class="metric-value tabular">${fmtEur(lastArr * 1000)}</div>
+          <div class="metric-delta ${trendClass}">${fmtPct(arrChange)} ${periodShort()}</div>
+        </div>
+        <div>
+          <div class="metric-label">Runway</div>
+          <div class="metric-value tabular">${p.runway.toFixed(1)} m</div>
+          <div class="metric-delta ${p.runway > 12 ? 'up' : p.runway > 8 ? 'flat' : 'down'}">${p.runway > 12 ? 'Confortable' : p.runway > 8 ? 'OK' : p.runway > 6 ? 'Court' : 'Critique'}</div>
+        </div>
+      </div>
+      <div class="portco-spark">${sparkline(sparkWindow, 250, 36, c1)}</div>
+      <div class="portco-foot">
+        <div><span class="dot ${p.status === 'healthy' ? '' : p.status === 'watch' ? 'amber' : 'red'}"></span>Update ${p.lastUpdate}</div>
+        <div>${fmtEur(p.invested)} investis · ${(p.ownership*100).toFixed(1)}%</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderDetail(id) {
+  const p = PORTCOS.find(x => x.id === id);
+  if (!p) return '<div>Société introuvable</div>';
+  const i = PORTCOS.indexOf(p);
+  const [c1, c2] = pal(i);
+  const initial = p.name.replace(/[^A-Za-zÀ-ÿ]/g, '').slice(0,2);
+  const lastArr = p.arr[p.arr.length-1];
+  const arrChange = pctChange(p.arr, 3);
+  const arrChangeYoY = pctChange(p.arr, 11);
+  const navMultiple = (p.valuation * p.ownership) / p.invested;
+
+  return `
+    <button class="btn btn-ghost" style="margin-bottom:16px" onclick="navigate('dashboard')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      Retour au portefeuille
+    </button>
+    <div class="detail-head">
+      <div class="detail-mark" style="background:linear-gradient(135deg, ${c1}, ${c2})">${initial}</div>
+      <div class="detail-info">
+        <div class="detail-name">${p.name}</div>
+        <div class="detail-tagline">${p.tagline}</div>
+        <div class="detail-tags">
+          <span class="tag">${p.sector}</span><span class="tag">${p.stage}</span><span class="tag">Co-lead : ${p.led}</span><span class="tag">Update il y a ${p.lastUpdate}</span>
+        </div>
+      </div>
+      <button class="btn btn-ghost" onclick="openModal('cap-table', '${p.id}')">Cap table complète</button>
+      <button class="btn btn-primary" onclick="openModal('update-mensuel', '${p.id}')">Update mensuelle</button>
+    </div>
+
+    <div class="investment-summary">
+      <div class="kpi-cell"><div class="kpi-label">Investi</div><div class="kpi-value tabular">${fmtEur(p.invested)}</div><div class="kpi-meta">Tour ${p.stage}</div></div>
+      <div class="kpi-cell"><div class="kpi-label">Détention</div><div class="kpi-value tabular">${(p.ownership*100).toFixed(1)}%</div><div class="kpi-meta">Pleine dilution</div></div>
+      <div class="kpi-cell"><div class="kpi-label">Valorisation</div><div class="kpi-value tabular">${fmtEur(p.valuation)}</div><div class="kpi-meta">Post-money</div></div>
+      <div class="kpi-cell"><div class="kpi-label">Multiple position</div><div class="kpi-value tabular">${navMultiple.toFixed(2).replace('.', ',')}×</div><div class="kpi-meta"><span class="kpi-trend ${navMultiple>1?'up':'down'}">${navMultiple>1?'+':''}${((navMultiple-1)*100).toFixed(0)}%</span> vs entry</div></div>
+      <div class="kpi-cell"><div class="kpi-label">Statut</div><div class="kpi-value tabular"><span class="status-pill ${p.status}" style="font-size:13px;padding:4px 10px;font-family:Public Sans">${p.status === 'healthy' ? 'En bonne santé' : p.status === 'watch' ? 'À surveiller' : 'À risque'}</span></div><div class="kpi-meta">${p.notes.split('.')[0]}.</div></div>
+    </div>
+
+    <div class="detail-grid">
+      <div class="card">
+        <div class="card-head"><div class="card-title">ARR — 12 derniers mois</div></div>
+        <div class="chart-stage">${areaChart(p.arr.map(v => v*1000), 720, 260, c1)}</div>
+        <div style="display:flex;gap:28px;padding:12px 22px 18px;border-top:1px solid var(--border)">
+          <div><div class="metric-label">ARR actuel</div><div class="mono" style="font-size:16px;font-weight:600;margin-top:2px">${fmtEur(lastArr * 12000)}</div></div>
+          <div><div class="metric-label">Croissance 3M</div><div class="mono" style="font-size:16px;font-weight:600;margin-top:2px">${fmtPct(arrChange)}</div></div>
+          <div><div class="metric-label">Croissance YoY</div><div class="mono" style="font-size:16px;font-weight:600;margin-top:2px">${fmtPct(arrChangeYoY)}</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Cap table simplifiée</div></div>
+        <table class="cap-table">
+          <thead><tr><th>Investisseur</th><th style="text-align:right">Tour</th><th style="text-align:right">%</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Fondateurs</strong></td><td class="num">—</td><td class="num">42,3%</td></tr>
+            <tr><td><strong>Sequoia Émergence</strong></td><td class="num">${p.stage}</td><td class="num">${(p.ownership*100).toFixed(1)}%</td></tr>
+            <tr><td>${p.led}</td><td class="num">${p.stage}</td><td class="num">${(p.ownership*1.4*100).toFixed(1)}%</td></tr>
+            <tr><td>Bpifrance</td><td class="num">Seed</td><td class="num">3,8%</td></tr>
+            <tr><td>BAs (3)</td><td class="num">Pre-seed</td><td class="num">5,1%</td></tr>
+            <tr><td>ESOP</td><td class="num">—</td><td class="num">${((100 - 42.3 - p.ownership*100 - p.ownership*1.4*100 - 3.8 - 5.1)).toFixed(1)}%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function renderInbox() {
+  return `
+    <div class="page-header">
+      <div>
+        <div class="page-eyebrow">Inbox · cycle novembre 2025</div>
+        <div class="page-title">Boîte de réception</div>
+        <div class="page-subtitle">14 updates portcos reçues ce mois. Sentinel extrait automatiquement les KPI et les normalise. Validez ou éditez les valeurs avant intégration.</div>
+      </div>
+    </div>
+    <div class="table-card">
+      ${INBOX.map(m => `
+        <div class="row" onclick="openModal('inbox-detail', '${m.from}|${(m.conf*100).toFixed(0)}')">
+          <div style="width:8px;height:8px;border-radius:50%;background:${m.unread?'var(--info)':'transparent'};border:${m.unread?'none':'1px solid var(--border-strong)'};flex-shrink:0"></div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:${m.unread?600:500};font-size:13.5px">${m.from} <span style="color:var(--text-3);font-weight:400;font-size:11.5px">· ${m.who}</span></div>
+            <div style="color:var(--text-2);font-size:13px;margin-top:2px">${m.subject}</div>
+          </div>
+          <div style="width:120px">
+            <div style="height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden"><div style="width:${(m.conf*100).toFixed(0)}%;height:100%;background:${m.conf>0.92?'var(--healthy)':m.conf>0.85?'#D97706':'var(--alert)'}"></div></div>
+            <div class="mono" style="font-size:11px;font-weight:600;margin-top:2px;color:${m.conf>0.92?'var(--healthy)':m.conf>0.85?'var(--watch)':'var(--alert)'}">${(m.conf*100).toFixed(0)}% conf.</div>
+          </div>
+          <div style="font-size:12px;color:var(--text-3);width:80px;text-align:right">${m.when}</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderAnomalies() {
+  return `
+    <div class="page-header">
+      <div>
+        <div class="page-eyebrow">Détection automatique · 9 alertes actives</div>
+        <div class="page-title">Alertes</div>
+        <div class="page-subtitle">Sentinel détecte les signaux faibles : runway court, croissance en décélération, retard de reporting, écart vs plan. Triées par sévérité.</div>
+      </div>
+      <button class="btn btn-ghost" onclick="showToast('Configurer les seuils d\\'alerte')">Configurer les seuils</button>
+    </div>
+    <div class="table-card">
+      ${ANOMALIES.map(a => {
+        const co = PORTCOS.find(p => p.name === a.co);
+        const sevBg = a.sev === 'high' ? 'var(--alert-bg)' : a.sev === 'med' ? 'var(--watch-bg)' : 'var(--info-bg)';
+        const sevColor = a.sev === 'high' ? 'var(--alert)' : a.sev === 'med' ? 'var(--watch)' : 'var(--info)';
+        return `
+          <div class="row" onclick="navigate('detail', '${co?co.id:''}')">
+            <div style="width:36px;height:36px;background:${sevBg};color:${sevColor};border-radius:8px;display:grid;place-items:center;flex-shrink:0">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line></svg>
+            </div>
+            <div style="width:170px">
+              <div style="font-weight:600;font-size:13.5px">${a.co}</div>
+              <div style="font-size:11.5px;color:var(--text-3);margin-top:2px">${a.sector}</div>
+            </div>
+            <div style="flex:1;font-size:13px;color:var(--text-2);line-height:1.5">${a.desc}</div>
+            <div style="font-size:12px;color:var(--text-3);width:80px">${a.when}</div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function renderLPReport() {
+  return `
+    <div class="page-header">
+      <div>
+        <div class="page-eyebrow">Brouillon généré · T4 2025</div>
+        <div class="page-title">Lettre trimestrielle aux LPs</div>
+        <div class="page-subtitle">Sentinel génère un brouillon à partir des données portfolio + des narratifs des CEO. Vous éditez puis exportez en PDF.</div>
+      </div>
+    </div>
+    <div class="lp-actions">
+      <button class="btn btn-ghost" onclick="openModal('edit-tone')">Éditer le ton</button>
+      <button class="btn btn-ghost" onclick="openModal('export-lp')">Exporter en PDF</button>
+      <button class="btn btn-ghost" onclick="openModal('sfdr-toggle')">Module SFDR Article 9</button>
+      <span style="flex:1"></span>
+      <button class="btn btn-primary" onclick="openModal('send-lps')">Envoyer aux 8 LPs</button>
+    </div>
+    <div class="lp-letter">
+      <div class="lp-period">Sequoia Émergence Fund III · T4 2025</div>
+      <h2>Lettre trimestrielle aux investisseurs</h2>
+      <p style="color:var(--text-2);font-size:14px;font-family:Public Sans;margin-top:18px">Chers partenaires,</p>
+      <p style="color:var(--text-2);font-size:14px;font-family:Public Sans">Le quatrième trimestre 2025 confirme la dynamique amorcée au T3 : la NAV consolidée du fonds progresse de €7,8M sur la période pour atteindre €178,4M, portée par la performance opérationnelle de 17 sociétés sur 25 et par une réévaluation chez Saumon (Series A à €48M post-money).</p>
+      <div class="lp-stat-row">
+        <div class="lp-stat-cell"><div class="lp-stat-label">NAV consolidée</div><div class="lp-stat-val">€178,4M</div></div>
+        <div class="lp-stat-cell"><div class="lp-stat-label">MOIC brute</div><div class="lp-stat-val">2,23×</div></div>
+        <div class="lp-stat-cell"><div class="lp-stat-label">IRR brut</div><div class="lp-stat-val">31,4%</div></div>
+        <div class="lp-stat-cell"><div class="lp-stat-label">DPI</div><div class="lp-stat-val">0,12×</div></div>
+      </div>
+      <h3>Performance trimestre</h3>
+      <p style="font-family:Public Sans;font-size:14px;color:var(--text-2)">L'ARR agrégé atteint €52,8M, en hausse de 10,2% sur le trimestre. Les sept sociétés à plus forte traction (Cinder, Lumio, Vergence, Pigeon, Maillon, Saumon, Mirador) représentent 68% de cette croissance.</p>
+      <h3>Conformité ESG · SFDR</h3>
+      <p style="font-family:Public Sans;font-size:14px;color:var(--text-2)">Le fonds maintient son classement Article 8. Sur les 22 sociétés en obligation de reporting, 19 ont fourni leurs PAI au 30 novembre (86%, en hausse vs 73% au T3).</p>
+    </div>
+  `;
+}
+
+let currentSettingsTab = 'collecte';
+
+const SETTINGS_PANELS = {
+  collecte: () => `
+    <div class="card">
+      <div class="card-head"><div class="card-title">Cadence de collecte mensuelle</div><span style="font-size:11.5px;color:var(--text-3)">Auto-pilote actif</span></div>
+      <div class="card-body" style="display:grid;gap:18px">
+        <div><div class="metric-label" style="margin-bottom:6px">Date d'envoi de la demande</div>
+          <div style="display:flex;gap:8px;align-items:center"><select style="border:1px solid var(--border);border-radius:6px;padding:7px 10px;background:white" onchange="showToast('Date sauvegardée')"><option>Le 5 de chaque mois</option><option>Le 1er de chaque mois</option></select><span style="font-size:12.5px;color:var(--text-2)">à</span><select style="border:1px solid var(--border);border-radius:6px;padding:7px 10px;background:white" onchange="showToast('Heure sauvegardée')"><option>09:00 (Europe/Paris)</option></select></div></div>
+        <div><div class="metric-label" style="margin-bottom:6px">Cycles de relance automatique</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap"><span class="chip active" onclick="showToast('Relance J+7 modifiée')">Jour 7 · email</span><span class="chip active" onclick="showToast('Relance J+12 modifiée')">Jour 12 · email + Slack</span><span class="chip active" onclick="showToast('Escalade partner J+18')">Jour 18 · escalade au partner</span></div></div>
+        <div><div class="metric-label" style="margin-bottom:6px">Format accepté</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap"><span class="chip active" onclick="showToast('PDF activé')">PDF</span><span class="chip active" onclick="showToast('Excel activé')">Excel</span><span class="chip active" onclick="showToast('Google Sheets activé')">Google Sheets</span><span class="chip active" onclick="showToast('Notion activé')">Notion</span><span class="chip active" onclick="showToast('Texte libre activé')">Texte libre</span><span class="chip active" onclick="showToast('Slack activé')">Slack message</span></div>
+          <div style="font-size:11.5px;color:var(--text-3);margin-top:8px">Les CEO/CFO envoient ce qu'ils ont déjà sous la main. Sentinel extrait et normalise.</div></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:18px">
+      <div class="card-head"><div class="card-title">Statistiques de collecte</div><span style="font-size:11.5px;color:var(--text-3)">12 derniers mois</span></div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:18px">
+          <div><div class="metric-label">Taux de réponse moyen</div><div class="kpi-value tabular" style="font-size:24px">93%</div><div style="font-size:11.5px;color:var(--text-3)">+18 pts vs avant Sentinel</div></div>
+          <div><div class="metric-label">Jours moyens collecte</div><div class="kpi-value tabular" style="font-size:24px">8,4 j</div><div style="font-size:11.5px;color:var(--text-3)">vs 19 j historiquement</div></div>
+          <div><div class="metric-label">Précision extraction</div><div class="kpi-value tabular" style="font-size:24px">99,2%</div><div style="font-size:11.5px;color:var(--text-3)">Sur 26 cycles</div></div>
+          <div><div class="metric-label">Temps économisé / mois</div><div class="kpi-value tabular" style="font-size:24px">~31 h</div><div style="font-size:11.5px;color:var(--text-3)">Équiv. €4,2K coût analyste</div></div>
+        </div>
+      </div>
+    </div>
+  `,
+  schema: () => {
+    const KPIS = [
+      ['Financier', [['ARR', 'Annual Recurring Revenue', true], ['MRR', 'Monthly Recurring Revenue', true], ['Net Revenue', 'CA net hors taxes', true], ['Gross Margin', 'Marge brute %', true], ['Cash', 'Trésorerie disponible', true], ['Burn rate', 'Cash burn mensuel net', true], ['Runway', 'Mois de runway au burn courant', true]]],
+      ['Croissance & Rétention', [['NRR', 'Net Revenue Retention', true], ['GRR', 'Gross Revenue Retention', true], ['CAC', 'Customer Acquisition Cost', true], ['LTV', 'Lifetime Value', true], ['Magic Number', 'Sales efficiency ratio', false], ['Churn (logo)', 'Churn par logo %', true]]],
+      ['Opérationnel', [['Headcount', 'Effectif total', true], ['Hiring plan', 'Recrutements ouverts', false], ['NPS', 'Net Promoter Score', false]]],
+      ['ESG / SFDR', [['Émissions scope 1+2', 'tCO2eq', true], ['Mixité H/F dirigeants', '% femmes au comex', true], ['PAI 14', 'Politique anti-corruption', false]]]
+    ];
+    return `
+      <div class="card">
+        <div class="card-head"><div class="card-title">Schéma de KPIs portfolio</div><button class="btn btn-ghost" onclick="showToast('Nouveau KPI custom créé')" style="padding:5px 10px;font-size:12px">+ Ajouter un KPI</button></div>
+        <div class="card-body" style="display:grid;gap:22px">
+          ${KPIS.map(([cat, items]) => `
+            <div>
+              <div class="metric-label" style="margin-bottom:10px;font-size:11.5px">${cat} · ${items.filter(i => i[2]).length}/${items.length} actifs</div>
+              <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">
+                ${items.map(([name, desc, active]) => `
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px">
+                    <div><div style="font-weight:600;font-size:13px">${name}</div><div style="font-size:11.5px;color:var(--text-3);margin-top:1px">${desc}</div></div>
+                    <span onclick="showToast('${name} ${active ? 'désactivé' : 'activé'}')" style="cursor:pointer;width:32px;height:18px;border-radius:9px;background:${active ? 'var(--healthy)' : 'var(--border-strong)'};position:relative;flex-shrink:0;transition:background 0.15s"><span style="position:absolute;top:2px;left:${active ? '16px' : '2px'};width:14px;height:14px;border-radius:50%;background:white;transition:left 0.15s"></span></span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  },
+  seuils: () => {
+    const THRESH = [
+      ['Runway critique', 'Runway < 6 mois', '6 mois', 'Alerte rouge · email partner', 'high'],
+      ['Runway court', 'Runway < 12 mois', '12 mois', 'Surveillance · email associate', 'med'],
+      ['ARR en baisse', 'ARR MoM < -2%', '-2% sur 2 mois consécutifs', 'Alerte rouge', 'high'],
+      ['Croissance ralentie', 'ARR MoM < +5% (vs plan 15%)', '5% / 15%', 'Surveillance', 'med'],
+      ['Cash burn excessif', 'Burn > +20% vs plan', '+20%', 'Alerte rouge', 'high'],
+      ['Retard de reporting', 'Update non reçu sous 21 j', '21 jours', 'Relance automatique', 'med'],
+      ['NRR sous performance', 'NRR < 100%', '100%', 'Surveillance', 'med'],
+      ['Headcount > plan', '>+15% vs plan 12M', '+15%', 'Notification info', 'low']
+    ];
+    return `
+      <div class="card">
+        <div class="card-head"><div class="card-title">Seuils d'alerte automatique</div><button class="btn btn-ghost" onclick="showToast('Nouvelle règle d\\'alerte créée')" style="padding:5px 10px;font-size:12px">+ Nouvelle règle</button></div>
+        <div>
+          ${THRESH.map(([name, desc, val, action, sev]) => `
+            <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;cursor:pointer" onclick="showToast('Édition règle : ${name}')">
+              <div style="width:32px;height:32px;border-radius:8px;background:${sev === 'high' ? 'var(--alert-bg)' : sev === 'med' ? 'var(--watch-bg)' : 'var(--info-bg)'};color:${sev === 'high' ? 'var(--alert)' : sev === 'med' ? 'var(--watch)' : 'var(--info)'};display:grid;place-items:center;flex-shrink:0;font-weight:700;font-size:13px">${sev === 'high' ? '!' : sev === 'med' ? '⚠' : 'i'}</div>
+              <div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13.5px">${name}</div><div style="font-size:12px;color:var(--text-2);margin-top:2px">${desc}</div></div>
+              <div style="width:160px;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600">${val}</div>
+              <div style="width:220px;font-size:12px;color:var(--text-2)">${action}</div>
+              <span onclick="event.stopPropagation();showToast('Règle ${name} désactivée')" style="cursor:pointer;width:32px;height:18px;border-radius:9px;background:var(--healthy);position:relative;flex-shrink:0"><span style="position:absolute;top:2px;left:16px;width:14px;height:14px;border-radius:50%;background:white"></span></span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  },
+  modeles: () => {
+    const TEMPLATES = [
+      ['Lettre trimestrielle standard', 'T4 2025 · Newsreader · 12 pages', 'En production', 'Modifié il y a 2 j'],
+      ['Lettre annuelle LPs', 'Rapport annuel intégré · 24 pages', 'Brouillon', 'Modifié il y a 5 j'],
+      ['Module SFDR Article 8', 'Compliance T4 · 4 pages', 'En production', 'Modifié il y a 8 j'],
+      ['Module SFDR Article 9', 'Reporting impact + PAI · 6 pages', 'En production', 'Modifié il y a 8 j'],
+      ['Capital call letter', 'Modèle EUR · 2 pages', 'En production', 'Modifié il y a 30 j'],
+      ['Distribution notice', 'Distribution exit · 1 page', 'En production', 'Modifié il y a 45 j']
+    ];
+    return `
+      <div class="card">
+        <div class="card-head"><div class="card-title">Modèles de reporting LP</div><button class="btn btn-primary" onclick="showToast('Nouveau modèle LP — choisir base')" style="padding:6px 12px;font-size:12px">+ Nouveau modèle</button></div>
+        <div>
+          ${TEMPLATES.map(([name, desc, status, when]) => `
+            <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;cursor:pointer" onclick="showToast('Éditer modèle : ${name}')">
+              <div style="width:36px;height:36px;border-radius:8px;background:var(--surface-2);display:grid;place-items:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg></div>
+              <div style="flex:1"><div style="font-weight:600;font-size:13.5px">${name}</div><div style="font-size:12px;color:var(--text-3);margin-top:2px">${desc}</div></div>
+              <span class="status-pill ${status === 'En production' ? '' : 'watch'}" style="font-size:10.5px">${status}</span>
+              <div style="font-size:11.5px;color:var(--text-3);width:130px;text-align:right">${when}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  },
+  sfdr: () => `
+    <div class="card">
+      <div class="card-head"><div class="card-title">Module SFDR · classification fonds</div></div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px">
+          <div style="padding:16px;border:2px solid var(--border);border-radius:10px;cursor:pointer" onclick="showToast('Article 6 sélectionné')"><div class="metric-label">Article 6</div><div style="font-weight:600;margin-top:4px">Sans objectif durable</div><div style="font-size:11.5px;color:var(--text-3);margin-top:6px">Reporting minimum</div></div>
+          <div style="padding:16px;border:2px solid var(--accent);background:var(--surface-2);border-radius:10px;cursor:pointer" onclick="showToast('Article 8 — actuel')"><div class="metric-label" style="color:var(--accent);font-weight:600">Article 8 · actif</div><div style="font-weight:600;margin-top:4px">Promotion ESG</div><div style="font-size:11.5px;color:var(--text-3);margin-top:6px">Reporting PAI · 16 indicateurs</div></div>
+          <div style="padding:16px;border:2px solid var(--border);border-radius:10px;cursor:pointer" onclick="showToast('Bascule Article 9 — confirmation requise')"><div class="metric-label">Article 9</div><div style="font-weight:600;margin-top:4px">Objectif durable</div><div style="font-size:11.5px;color:var(--text-3);margin-top:6px">Reporting impact complet</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:18px">
+      <div class="card-head"><div class="card-title">Collecte PAI portcos</div><span style="font-size:11.5px;color:var(--text-3)">22 portcos en obligation · 19 reçus (86%)</span></div>
+      <div>
+        ${['PAI 1 - Émissions GES', 'PAI 2 - Empreinte carbone', 'PAI 4 - Combustibles fossiles', 'PAI 5 - Énergie renouvelable', 'PAI 13 - Conformité OCDE', 'PAI 14 - Anti-corruption'].map(p => `
+          <div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;cursor:pointer" onclick="showToast('Détail ${p}')">
+            <div style="flex:1;font-size:13px;font-weight:500">${p}</div>
+            <div style="width:140px"><div style="height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden"><div style="width:${75 + Math.floor((p.charCodeAt(4) % 20))}%;height:100%;background:var(--healthy)"></div></div></div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;width:60px;text-align:right">${75 + (p.charCodeAt(4) % 20)}%</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `,
+  integrations: () => {
+    const INT = [
+      ['Gmail / Google Workspace', 'Reception updates portcos', true, '✉'],
+      ['Slack', 'Notifications + relances', true, '💬'],
+      ['Microsoft Outlook', 'Reception updates portcos', false, '✉'],
+      ['Pennylane', 'Sync comptabilité portcos', true, '💼'],
+      ['Qonto', 'Données bancaires temps réel', true, '🏦'],
+      ['Stripe', 'MRR / churn live', true, '💳'],
+      ['Notion', 'Pages portcos synchronisées', true, '📝'],
+      ['Affinity', 'CRM deal flow + portfolio', false, '📇'],
+      ['Salesforce', 'Sync investor relations', false, '☁'],
+      ['DocuSign', 'Side letters + capital calls', true, '✍'],
+      ['Carta', 'Cap tables portcos sync', false, '📊'],
+      ['Sweep / Greenly', 'Données carbone portcos', true, '🌱']
+    ];
+    return `
+      <div class="card">
+        <div class="card-head"><div class="card-title">Intégrations</div><span style="font-size:11.5px;color:var(--text-3)">${INT.filter(i => i[2]).length} connectées / ${INT.length} disponibles</span></div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:0">
+          ${INT.map(([name, desc, connected, icon]) => `
+            <div style="padding:14px 18px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);display:flex;align-items:center;gap:12px">
+              <div style="width:34px;height:34px;border-radius:8px;background:var(--surface-2);display:grid;place-items:center;font-size:16px;flex-shrink:0">${icon}</div>
+              <div style="flex:1"><div style="font-weight:600;font-size:13px">${name}</div><div style="font-size:11.5px;color:var(--text-3);margin-top:1px">${desc}</div></div>
+              <button class="btn ${connected ? 'btn-ghost' : 'btn-primary'}" style="padding:5px 10px;font-size:11.5px" onclick="showToast('${connected ? 'Déconnexion' : 'Connexion'} ${name}')">${connected ? 'Connecté' : 'Connecter'}</button>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  },
+  equipe: () => {
+    const TEAM = [
+      ['Nicolas Raoul-Duval', 'Investment Associate', 'NR', 'Admin', '#FBBF24', 'Vous'],
+      ['Sophie Lambert', 'General Partner', 'SL', 'Admin', '#7C2D12', 'Actif il y a 2h'],
+      ['Théo Mercier', 'Managing Partner', 'TM', 'Admin', '#1E40AF', 'Actif il y a 30m'],
+      ['Camille Dauphin', 'Principal', 'CD', 'Éditeur', '#166534', 'Actif hier'],
+      ['Antoine Rivière', 'CFO Fund', 'AR', 'Éditeur', '#581C87', 'Actif il y a 4h'],
+      ['Léa Petit', 'Analyst', 'LP', 'Éditeur', '#9D174D', 'Actif il y a 1h'],
+      ['Marc Lefevre', 'External advisor', 'ML', 'Lecture seule', '#3F3F46', 'Actif il y a 5 j']
+    ];
+    return `
+      <div class="card">
+        <div class="card-head"><div class="card-title">Équipe Sequoia Émergence</div><button class="btn btn-primary" onclick="showToast('Invitation envoyée')" style="padding:6px 12px;font-size:12px">+ Inviter un membre</button></div>
+        <div>
+          ${TEAM.map(([name, role, init, perm, color, status]) => `
+            <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;cursor:pointer" onclick="showToast('Gérer ${name}')">
+              <div class="avatar" style="background:${color}">${init}</div>
+              <div style="flex:1"><div style="font-weight:600;font-size:13.5px">${name}${status === 'Vous' ? ' <span style=\"font-size:11px;color:var(--text-3);font-weight:400\">· vous</span>' : ''}</div><div style="font-size:12px;color:var(--text-3);margin-top:2px">${role}</div></div>
+              <select style="border:1px solid var(--border);border-radius:6px;padding:5px 9px;font-size:12px;background:white" onchange="event.stopPropagation();showToast('Permission modifiée')" onclick="event.stopPropagation()"><option ${perm === 'Admin' ? 'selected' : ''}>Admin</option><option ${perm === 'Éditeur' ? 'selected' : ''}>Éditeur</option><option ${perm === 'Lecture seule' ? 'selected' : ''}>Lecture seule</option></select>
+              <div style="font-size:11.5px;color:var(--text-3);width:130px;text-align:right">${status === 'Vous' ? '' : status}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  },
+  facturation: () => `
+    <div class="card">
+      <div class="card-head"><div class="card-title">Plan actuel</div><span style="font-size:11.5px;color:var(--text-3)">Renouvellement automatique au 1er janvier 2026</span></div>
+      <div class="card-body" style="display:grid;grid-template-columns:2fr 1fr;gap:24px">
+        <div>
+          <div style="display:flex;align-items:baseline;gap:12px"><div class="kpi-value tabular" style="font-size:32px">Sentinel Pro</div><div style="color:var(--text-3);font-size:13px">2 fonds · 50 portcos max · 7 utilisateurs</div></div>
+          <div style="margin-top:18px;display:grid;grid-template-columns:repeat(2,1fr);gap:10px;font-size:13px">
+            <div>✓ Collecte automatique illimitée</div>
+            <div>✓ Modules SFDR Article 8 et 9</div>
+            <div>✓ Brouillons LP illimités</div>
+            <div>✓ Intégrations Gmail/Slack/Notion</div>
+            <div>✓ Détection anomalies</div>
+            <div>✓ Support prioritaire</div>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div class="metric-label">Coût annuel</div>
+          <div class="kpi-value tabular" style="font-size:32px">€36 000</div>
+          <div style="font-size:12px;color:var(--text-3)">€3 000 / mois · facturé annuellement</div>
+          <button class="btn btn-ghost" style="margin-top:14px" onclick="showToast('Passage au plan Enterprise — démo planifiée')">Passer au plan Enterprise →</button>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:18px">
+      <div class="card-head"><div class="card-title">Historique de facturation</div><button class="btn btn-ghost" onclick="showToast('Téléchargement de toutes les factures')" style="padding:5px 10px;font-size:12px">Télécharger tout</button></div>
+      <div>
+        ${[['01 jan 2025', '€36 000', 'Sentinel Pro · annuel', 'Payé', 'fac_2025_001'], ['01 jan 2024', '€28 000', 'Sentinel Pro · annuel', 'Payé', 'fac_2024_001'], ['01 jul 2023', '€14 000', 'Sentinel Starter · semestre', 'Payé', 'fac_2023_002'], ['01 jan 2023', '€14 000', 'Sentinel Starter · semestre', 'Payé', 'fac_2023_001']].map(([date, amount, desc, status, ref]) => `
+          <div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px">
+            <div style="width:110px;font-size:13px;font-weight:600">${date}</div>
+            <div style="flex:1;font-size:13px">${desc}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600">${amount}</div>
+            <span class="status-pill" style="font-size:10.5px">${status}</span>
+            <button class="btn btn-ghost" style="padding:4px 10px;font-size:11.5px" onclick="showToast('Téléchargement ${ref}.pdf')">PDF</button>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `
+};
+
+const SETTINGS_TABS = [
+  { id: 'collecte', label: 'Collecte portcos' },
+  { id: 'schema', label: 'Schéma de KPIs' },
+  { id: 'seuils', label: "Seuils d'alerte" },
+  { id: 'modeles', label: 'Modèles LP' },
+  { id: 'sfdr', label: 'Module SFDR' },
+  { id: 'integrations', label: 'Intégrations' },
+  { id: 'equipe', label: 'Équipe et accès' },
+  { id: 'facturation', label: 'Facturation' }
+];
+
+function switchSettingsTab(tabId) {
+  currentSettingsTab = tabId;
+  document.querySelectorAll('.settings-nav-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.tab === tabId);
+  });
+  const panel = document.getElementById('settings-panel');
+  if (panel) {
+    panel.style.opacity = '0';
+    setTimeout(() => {
+      panel.innerHTML = SETTINGS_PANELS[tabId]();
+      panel.style.opacity = '1';
+    }, 80);
+  }
+}
+
+function renderSettings() {
+  setTimeout(() => {
+    document.querySelectorAll('.settings-nav-item').forEach(el => {
+      el.addEventListener('click', () => switchSettingsTab(el.dataset.tab));
+    });
+  }, 0);
+  return `
+    <div class="page-header">
+      <div>
+        <div class="page-eyebrow">Configuration · Sequoia Émergence Fund III</div>
+        <div class="page-title">Paramètres</div>
+        <div class="page-subtitle">Configurez la cadence de collecte, les seuils d'alerte, les modèles de reporting LP et les intégrations.</div>
+      </div>
+    </div>
+    <div class="settings-grid">
+      <div>
+        ${SETTINGS_TABS.map(t => `<div class="settings-nav-item ${t.id === currentSettingsTab ? 'active' : ''}" data-tab="${t.id}">${t.label}</div>`).join('')}
+      </div>
+      <div id="settings-panel" style="transition:opacity 0.18s ease">
+        ${SETTINGS_PANELS[currentSettingsTab]()}
+      </div>
+    </div>
+  `;
+}
+
+// ============================================================================
+// NAVIGATION
+// ============================================================================
+
+const ROUTES = { dashboard: renderDashboard, detail: renderDetail, inbox: renderInbox, anomalies: renderAnomalies, 'lp-report': renderLPReport, settings: renderSettings };
+
+function navigate(view, arg) {
+  currentView = view;
+  const content = document.getElementById('content');
+  content.style.opacity = '0';
+  setTimeout(() => {
+    content.innerHTML = ROUTES[view] ? ROUTES[view](arg) : '';
+    content.style.opacity = '1';
+    document.querySelectorAll('.nav-item').forEach(el => {
+      el.classList.toggle('active', el.dataset.view === view || (view === 'detail' && el.dataset.view === 'dashboard'));
+    });
+    document.querySelectorAll('.chip[data-filter]').forEach(c => {
+      c.addEventListener('click', () => {
+        document.querySelectorAll('.chip[data-filter]').forEach(x => x.classList.remove('active'));
+        c.classList.add('active');
+        const f = c.dataset.filter;
+        document.querySelectorAll('.portco-card').forEach(card => {
+          if (f === 'all') { card.style.display = ''; return; }
+          card.style.display = card.classList.contains(f) ? '' : 'none';
+        });
+      });
+    });
+    window.scrollTo({ top: 0 });
+  }, 80);
+}
+
+document.querySelectorAll('.nav-item').forEach(el => {
+  el.addEventListener('click', () => navigate(el.dataset.view));
+});
+
+// Period selector
+function setPeriod(p) {
+  if (currentPeriod === p) return;
+  currentPeriod = p;
+  document.querySelectorAll('#period-selector button').forEach(b => b.classList.toggle('active', b.dataset.period === p));
+  if (currentView === 'dashboard') navigate('dashboard');
+}
+document.querySelectorAll('#period-selector button').forEach(b => {
+  b.addEventListener('click', () => setPeriod(b.dataset.period));
+});
+
+// Search
+const searchInput = document.getElementById('search-input');
+searchInput.addEventListener('input', (e) => {
+  if (currentView !== 'dashboard') return;
+  const q = e.target.value.toLowerCase().trim();
+  document.querySelectorAll('.portco-card').forEach(c => {
+    const name = c.querySelector('.portco-name')?.textContent.toLowerCase() || '';
+    const meta = c.querySelector('.portco-meta')?.textContent.toLowerCase() || '';
+    c.style.display = (!q || name.includes(q) || meta.includes(q)) ? '' : 'none';
+  });
+});
+document.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); searchInput.focus(); searchInput.select(); }
+  if (e.key === 'Escape' && document.activeElement === searchInput) { searchInput.value = ''; searchInput.dispatchEvent(new Event('input')); searchInput.blur(); }
+});
+
+// ============================================================================
+// MODALS
+// ============================================================================
+const MODALS = {
+  'fund-switcher': () => ({
+    title: 'Changer de fonds',
+    body: `
+      <div style="display:grid;gap:8px">
+        ${[['SE','Sequoia Émergence','Fund III · €120M · 25 portcos','#475569','active'],['SK','Sequoia Klima','Fund II · €80M · 14 portcos','#166534',''],['SD','Sequoia Deeptech','Fund I · €60M · 9 portcos','#1E40AF','']].map(([init,n,m,c,a]) => `
+          <div onclick="closeModal();showToast('Bascule vers ${n}')" style="padding:14px;border:2px solid ${a?'var(--accent)':'var(--border)'};background:${a?'var(--surface-2)':'white'};border-radius:10px;display:flex;align-items:center;gap:12px;cursor:pointer">
+            <div class="fund-mark" style="width:36px;height:36px;background:${c}">${init}</div>
+            <div style="flex:1"><div style="font-weight:600;font-size:14px">${n}</div><div style="font-size:12px;color:var(--text-3);margin-top:2px">${m}</div></div>
+            ${a?'<span style="font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase">Actif</span>':''}
+          </div>
+        `).join('')}
+      </div>
+    `,
+    foot: '<button class="btn btn-ghost" onclick="closeModal()">Fermer</button><button class="btn btn-primary" onclick="closeModal();showToast(\'Nouveau fonds créé\')">+ Nouveau fonds</button>'
+  }),
+  'user-menu': () => ({
+    title: 'Mon compte',
+    body: `
+      <div style="display:flex;align-items:center;gap:14px;padding-bottom:16px;border-bottom:1px solid var(--border);margin-bottom:16px">
+        <div class="avatar" style="width:48px;height:48px;font-size:16px">NR</div>
+        <div><div style="font-weight:600;font-size:15px">Nicolas Raoul-Duval</div><div style="color:var(--text-3);font-size:12.5px">nicolas@sequoia-emergence.fr · Investment Associate</div></div>
+      </div>
+      <div style="display:grid;gap:6px">
+        ${['Mon profil','Préférences','Notifications email','Sécurité','Centre d’aide','API & développeurs'].map(it => `<div onclick="closeModal();showToast('${it}')" style="padding:10px 12px;border-radius:6px;cursor:pointer;font-size:13.5px" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='transparent'">${it}</div>`).join('')}
+        <div style="height:1px;background:var(--border);margin:6px 0"></div>
+        <div onclick="closeModal();showToast('Déconnexion en cours…')" style="padding:10px 12px;border-radius:6px;cursor:pointer;font-size:13.5px;color:var(--alert)" onmouseover="this.style.background='var(--alert-bg)'" onmouseout="this.style.background='transparent'">Se déconnecter</div>
+      </div>
+    `,
+    foot: ''
+  }),
+  'export': () => ({
+    title: 'Exporter le portefeuille',
+    body: `
+      <div style="margin-bottom:14px;color:var(--text-2);font-size:13.5px">Choisissez le format et la portée de l'export.</div>
+      <div class="metric-label" style="margin-bottom:8px">Format</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px">
+        ${['PDF résumé','Excel détaillé','CSV brut'].map((f,i) => `<div onclick="document.querySelectorAll('#export-fmt > div').forEach(e=>e.style.border='2px solid var(--border)');this.style.border='2px solid var(--accent)'" style="padding:14px;border:2px solid ${i===1?'var(--accent)':'var(--border)'};border-radius:8px;text-align:center;cursor:pointer;font-weight:500;font-size:13px" id="export-fmt-${i}">${f}</div>`).join('')}
+      </div>
+      <div class="metric-label" style="margin-bottom:8px">Portée</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px">
+        <span class="chip active">Tous les portcos (25)</span><span class="chip">À surveiller (5)</span><span class="chip">À risque (3)</span>
+      </div>
+      <div class="metric-label" style="margin-bottom:8px">Période</div>
+      <div style="display:flex;gap:6px"><span class="chip">M-1</span><span class="chip active">T4 2025</span><span class="chip">YTD 2025</span><span class="chip">Tout l'historique</span></div>
+    `,
+    foot: '<button class="btn btn-ghost" onclick="closeModal()">Annuler</button><button class="btn btn-primary" onclick="closeModal();showToast(\'Export Excel généré · téléchargement en cours\')">Télécharger</button>'
+  }),
+  'invite-portco': () => ({
+    title: 'Inviter une nouvelle portco',
+    body: `
+      <div style="display:grid;gap:14px">
+        <div><div class="metric-label" style="margin-bottom:6px">Nom de la société</div><input type="text" placeholder="ex : Pigeon Logistics" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13.5px"/></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><div class="metric-label" style="margin-bottom:6px">Email du CEO/CFO</div><input type="email" placeholder="ceo@portco.com" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13.5px"/></div><div><div class="metric-label" style="margin-bottom:6px">Stade</div><select style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13.5px;background:white"><option>Pre-seed</option><option>Seed</option><option>Series A</option><option>Series B+</option></select></div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><div class="metric-label" style="margin-bottom:6px">Investi (€)</div><input type="text" placeholder="2 500 000" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13.5px"/></div><div><div class="metric-label" style="margin-bottom:6px">Détention %</div><input type="text" placeholder="8.2" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13.5px"/></div></div>
+        <div style="background:var(--surface-2);border-radius:8px;padding:12px;font-size:12.5px;color:var(--text-2)">Sentinel enverra automatiquement l'invitation, configurera la cadence de reporting et créera la fiche portco.</div>
+      </div>
+    `,
+    foot: '<button class="btn btn-ghost" onclick="closeModal()">Annuler</button><button class="btn btn-primary" onclick="closeModal();showToast(\'Invitation envoyée à la portco\')">Envoyer l\'invitation</button>'
+  }),
+  'cap-table': (id) => {
+    const p = PORTCOS.find(x => x.id === id);
+    if (!p) return MODALS['fund-switcher']();
+    return {
+      title: `Cap table · ${p.name}`,
+      body: `
+        <div style="display:flex;gap:18px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border)"><div><div class="metric-label">Valorisation post-money</div><div class="mono" style="font-weight:600;font-size:16px;margin-top:2px">${fmtEur(p.valuation)}</div></div><div><div class="metric-label">Total dilué</div><div class="mono" style="font-weight:600;font-size:16px;margin-top:2px">100%</div></div><div><div class="metric-label">Tour le plus récent</div><div class="mono" style="font-weight:600;font-size:16px;margin-top:2px">${p.stage}</div></div></div>
+        <table class="cap-table"><thead><tr><th>Investisseur</th><th>Tour</th><th style="text-align:right">Investi</th><th style="text-align:right">Pref.</th><th style="text-align:right">%</th></tr></thead><tbody>
+          <tr><td><strong>Fondateurs</strong></td><td>Founding</td><td class="num">—</td><td class="num">—</td><td class="num">42,3%</td></tr>
+          <tr><td><strong>Sequoia Émergence</strong></td><td>${p.stage}</td><td class="num">${fmtEur(p.invested)}</td><td class="num">1x non-part</td><td class="num">${(p.ownership*100).toFixed(1)}%</td></tr>
+          <tr><td>${p.led}</td><td>${p.stage}</td><td class="num">${fmtEur(p.invested*1.4)}</td><td class="num">1x non-part</td><td class="num">${(p.ownership*1.4*100).toFixed(1)}%</td></tr>
+          <tr><td>Bpifrance</td><td>Seed</td><td class="num">€0.8M</td><td class="num">1x non-part</td><td class="num">3,8%</td></tr>
+          <tr><td>BAs (3)</td><td>Pre-seed</td><td class="num">€0.5M</td><td class="num">—</td><td class="num">5,1%</td></tr>
+          <tr><td>ESOP non alloué</td><td>—</td><td class="num">—</td><td class="num">—</td><td class="num">${((100 - 42.3 - p.ownership*100 - p.ownership*1.4*100 - 3.8 - 5.1)).toFixed(1)}%</td></tr>
+        </tbody></table>
+        <div style="margin-top:14px;padding:12px;background:var(--surface-2);border-radius:8px;font-size:12.5px;color:var(--text-2)">⚙ Waterfall exit : à €${(p.valuation * 2.5/1e6).toFixed(0)}M → Sentinel retourne ${fmtEur(p.valuation * 2.5 * p.ownership)} (${(2.5*p.ownership*p.valuation/p.invested).toFixed(2).replace('.', ',')}× sur ${fmtEur(p.invested)} investis)</div>
+      `,
+      foot: '<button class="btn btn-ghost" onclick="closeModal();showToast(\'Export waterfall en cours…\')">Exporter waterfall</button><button class="btn btn-primary" onclick="closeModal()">Fermer</button>'
+    };
+  },
+  'update-mensuel': (id) => {
+    const p = PORTCOS.find(x => x.id === id);
+    if (!p) return MODALS['fund-switcher']();
+    return {
+      title: `Demander un update à ${p.name}`,
+      body: `
+        <div style="margin-bottom:14px;color:var(--text-2);font-size:13.5px">Le CEO/CFO reçoit un email avec un formulaire personnalisé. Sentinel parsera leur réponse automatiquement.</div>
+        <div style="display:grid;gap:14px">
+          <div><div class="metric-label" style="margin-bottom:6px">Destinataire</div><input type="email" value="ceo@${p.id}.com" readonly style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13.5px;background:var(--surface-2)"/></div>
+          <div><div class="metric-label" style="margin-bottom:6px">KPIs demandés</div><div style="display:flex;gap:6px;flex-wrap:wrap"><span class="chip active">ARR</span><span class="chip active">Burn</span><span class="chip active">Headcount</span><span class="chip active">NRR</span><span class="chip active">Pipeline</span><span class="chip active">Cash</span><span class="chip">CAC</span><span class="chip">LTV</span></div></div>
+          <div><div class="metric-label" style="margin-bottom:6px">Note libre (optionnel)</div><textarea placeholder="Si besoin, demande spécifique..." style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13.5px;min-height:70px;resize:vertical"></textarea></div>
+        </div>
+      `,
+      foot: '<button class="btn btn-ghost" onclick="closeModal()">Annuler</button><button class="btn btn-primary" onclick="closeModal();showToast(\'Update demandé · email envoyé\')">Envoyer la demande</button>'
+    };
+  },
+  'edit-tone': () => ({
+    title: 'Éditer le ton de la lettre LP',
+    body: `
+      <div style="margin-bottom:14px;color:var(--text-2);font-size:13.5px">Le ton influence la formulation des paragraphes générés par Sentinel.</div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px">
+        ${[['Sobre & analytique','Style HBR · faits + chiffres','active'],['Optimiste & visionnaire','Style Sequoia · trajectoire','idle'],['Transparent & humble','Style Y Combinator · doute','idle'],['Formel institutionnel','Style banque privée','idle']].map(([n,d,s])=>`<div style="padding:14px;border:2px solid ${s==='active'?'var(--accent)':'var(--border)'};border-radius:8px;cursor:pointer;background:${s==='active'?'var(--surface-2)':'white'}" onclick="showToast('Ton appliqué : ${n}')"><div style="font-weight:600;font-size:13.5px">${n}</div><div style="font-size:11.5px;color:var(--text-3);margin-top:3px">${d}</div></div>`).join('')}
+      </div>
+      <div class="metric-label" style="margin-bottom:6px">Instructions custom (optionnel)</div>
+      <textarea placeholder="ex : éviter le mot 'exposure', préférer 'vintage' à 'millésime'..." style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13.5px;min-height:60px"></textarea>
+    `,
+    foot: '<button class="btn btn-ghost" onclick="closeModal()">Annuler</button><button class="btn btn-primary" onclick="closeModal();showToast(\'Ton sauvegardé · régénération brouillon LP\')">Régénérer le brouillon</button>'
+  }),
+  'export-lp': () => ({
+    title: 'Exporter la lettre LP',
+    body: `
+      <div style="margin-bottom:14px;color:var(--text-2);font-size:13.5px">Sequoia Émergence · T4 2025 · 12 pages</div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px">
+        ${[['PDF haute qualité','Pour envoi aux LPs','active'],['PDF/A archive','Compatibilité long terme','idle'],['Word .docx','Pour édition manuelle','idle'],['Markdown','Pour CMS interne','idle']].map(([n,d,s])=>`<div style="padding:14px;border:2px solid ${s==='active'?'var(--accent)':'var(--border)'};border-radius:8px;cursor:pointer;background:${s==='active'?'var(--surface-2)':'white'}"><div style="font-weight:600;font-size:13.5px">${n}</div><div style="font-size:11.5px;color:var(--text-3);margin-top:3px">${d}</div></div>`).join('')}
+      </div>
+      <div style="display:flex;gap:14px"><label style="display:flex;align-items:center;gap:7px;font-size:13px"><input type="checkbox" checked/> Inclure annexes</label><label style="display:flex;align-items:center;gap:7px;font-size:13px"><input type="checkbox" checked/> Cap tables détaillées</label><label style="display:flex;align-items:center;gap:7px;font-size:13px"><input type="checkbox"/> Logo LP en couverture</label></div>
+    `,
+    foot: '<button class="btn btn-ghost" onclick="closeModal()">Annuler</button><button class="btn btn-primary" onclick="closeModal();showToast(\'PDF généré · 12 pages · téléchargement en cours\')">Télécharger PDF</button>'
+  }),
+  'sfdr-toggle': () => ({
+    title: 'Module SFDR',
+    body: `
+      <div style="margin-bottom:14px;color:var(--text-2);font-size:13.5px">Le fonds est actuellement classé <strong style="color:var(--accent)">Article 8</strong>. Passer à Article 9 nécessite une révision du règlement et une notification AMF.</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px">
+        <div style="padding:14px;border:2px solid var(--border);border-radius:8px;text-align:center;cursor:pointer" onclick="showToast('Bascule Article 6 — déclassification')"><div style="font-weight:600">Article 6</div><div style="font-size:11.5px;color:var(--text-3);margin-top:3px">Sans objectif ESG</div></div>
+        <div style="padding:14px;border:2px solid var(--accent);background:var(--surface-2);border-radius:8px;text-align:center"><div style="font-weight:600;color:var(--accent)">Article 8 · actif</div><div style="font-size:11.5px;color:var(--text-3);margin-top:3px">Promotion ESG</div></div>
+        <div style="padding:14px;border:2px solid var(--border);border-radius:8px;text-align:center;cursor:pointer" onclick="showToast('Demande de bascule Article 9 — workflow lancé')"><div style="font-weight:600">Article 9</div><div style="font-size:11.5px;color:var(--text-3);margin-top:3px">Objectif durable</div></div>
+      </div>
+      <div style="background:var(--watch-bg);border:1px solid #FCD34D;border-radius:8px;padding:12px;font-size:12.5px;color:var(--watch)">⚠ Activer le module Article 9 nécessite 6 PAI supplémentaires et une revue compliance par votre cabinet (≈4 semaines).</div>
+    `,
+    foot: '<button class="btn btn-ghost" onclick="closeModal()">Fermer</button>'
+  }),
+  'send-lps': () => ({
+    title: 'Envoyer la lettre aux LPs',
+    body: `
+      <div style="margin-bottom:16px;color:var(--text-2);font-size:13.5px">Vérifiez la liste de diffusion avant envoi. La lettre est tracking-enabled (ouvertures + temps de lecture).</div>
+      <div class="metric-label" style="margin-bottom:8px">LPs destinataires (8)</div>
+      <div style="display:grid;gap:6px;margin-bottom:16px">
+        ${[['Crédit Mutuel AM','c.dupond@cm-am.fr','€18M committed'],['BPCE Solutions','j.michel@bpce.fr','€15M committed'],['MAIF Impact','e.lambert@maif.fr','€12M committed'],['CARMF','contact@carmf.fr','€10M committed'],['ERAFP','direction@erafp.fr','€8M committed'],['Banque Postale AM','p.lebel@lbpam.fr','€20M committed'],['Bpifrance','investisseur@bpifrance.fr','€25M committed'],['Family Office Pinault','contact@artemis.fr','€12M committed']].map(([n,e,c]) => `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface-2);border-radius:6px"><input type="checkbox" checked/><div style="flex:1"><div style="font-weight:600;font-size:13px">${n}</div><div style="font-size:11.5px;color:var(--text-3)">${e}</div></div><div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:600">${c}</div></div>`).join('')}
+      </div>
+      <div style="display:flex;gap:14px;font-size:13px"><label style="display:flex;align-items:center;gap:7px"><input type="checkbox" checked/> Tracking ouverture</label><label style="display:flex;align-items:center;gap:7px"><input type="checkbox" checked/> CC partner</label></div>
+    `,
+    foot: '<button class="btn btn-ghost" onclick="closeModal()">Annuler</button><button class="btn btn-primary" onclick="closeModal();showToast(\'Lettre envoyée à 8 LPs · tracking actif\')">Envoyer maintenant</button>'
+  }),
+  'inbox-detail': (arg) => {
+    const [co, conf] = arg.split('|');
+    const KPIS = [['ARR (M-1)','€1.54M','€1.45M','+6.2% MoM','high'],['MRR','€128K','€121K','+5.8%','high'],['Burn net','€265K','€256K','+3.5%','high'],['Headcount','50','48','+2','high'],['Cash','€4.2M','€4.5M','-€300K','high'],['Runway','14.2 mois','15 mois','-0.8','med'],['NRR','118%','115%','+3 pts','med'],['Top 5 clients','42% revenu','45% revenu','-3 pts','low'],['Pipeline T+1','€680K weighted','€590K','+15%','low']];
+    return {
+      title: `Update ${co} · ${conf}% confidence`,
+      body: `
+        <div style="margin-bottom:14px;color:var(--text-2);font-size:13.5px">Sentinel a extrait ${KPIS.length} KPIs du PDF reçu. Vérifiez et validez avant intégration au portefeuille.</div>
+        <div style="display:grid;gap:6px">
+          ${KPIS.map(([n,v,prev,delta,conf2])=>`<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--surface-2);border-radius:6px"><div style="flex:1"><div style="font-size:13px;font-weight:600">${n}</div><div style="font-size:11.5px;color:var(--text-3);margin-top:1px">vs M-1 : ${prev} · ${delta}</div></div><div style="font-family:'JetBrains Mono',monospace;font-weight:600;font-size:13.5px;min-width:100px;text-align:right">${v}</div><div style="width:14px;height:14px;border-radius:50%;background:${conf2==='high'?'var(--healthy)':conf2==='med'?'#D97706':'var(--alert)'};flex-shrink:0" title="Confidence ${conf2}"></div></div>`).join('')}
+        </div>
+        <div style="margin-top:14px;padding:12px;background:var(--info-bg);border-radius:8px;font-size:12.5px;color:var(--info)">ℹ Note du CEO : "Pipeline T+1 fort, mais turnover commercial à surveiller. Recrutement Head of Sales en cours."</div>
+      `,
+      foot: '<button class="btn btn-ghost" onclick="closeModal();showToast(\'Demande de clarification envoyée\')">Demander clarification</button><button class="btn btn-primary" onclick="closeModal();showToast(\'Update validée · KPIs intégrés au portefeuille\')">Valider & intégrer</button>'
+    };
+  }
+};
+
+function openModal(name, arg) {
+  const m = MODALS[name] ? MODALS[name](arg) : null;
+  if (!m) return;
+  const ov = document.getElementById('modal-overlay');
+  ov.innerHTML = `<div class="modal" onclick="event.stopPropagation()"><div class="modal-head"><div class="modal-title">${m.title}</div><div class="modal-close" onclick="closeModal()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></div></div><div class="modal-body">${m.body}</div>${m.foot ? `<div class="modal-foot">${m.foot}</div>` : ''}</div>`;
+  ov.classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+// ============================================================================
+// NOTIFICATIONS DROPDOWN
+// ============================================================================
+const NOTIFS = [
+  ['Tendre — runway critique', 'Runway descendu à 5,1 mois. CAC en hausse +24%.', 'il y a 2h', 'high', 'tendre'],
+  ['Rumeur — PMF non atteint', 'Pas de croissance ARR depuis 6 mois. Cash sous €600K.', 'il y a 4h', 'high', 'rumeur'],
+  ['Ardoise — ARR en baisse', '2 mois consécutifs de décroissance MoM.', 'il y a 6h', 'high', 'ardoise'],
+  ['Pigeon — update reçue', 'Update novembre parsée, 14 KPIs extraits (96% conf.).', 'hier', 'low', 'pigeon'],
+  ['Cinder — pré-Series A en cours', 'Term sheet reçue, valorisation 3,2× post-money.', 'hier', 'med', 'cinder'],
+];
+function renderNotifs() {
+  document.getElementById('notif-body').innerHTML = NOTIFS.map(([t, d, w, sev, id]) => `
+    <div class="notif-row" onclick="closeNotifDropdown();${id ? `navigate('detail','${id}')` : ''}">
+      <div class="notif-dot-sev" style="background:${sev==='high'?'var(--alert)':sev==='med'?'var(--watch)':'var(--healthy)'}"></div>
+      <div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">${t}</div><div style="font-size:12px;color:var(--text-2);margin-top:2px;line-height:1.4">${d}</div><div class="notif-time">${w}</div></div>
+    </div>
+  `).join('');
+}
+function toggleNotifDropdown(e) {
+  e?.stopPropagation();
+  const d = document.getElementById('notif-dropdown');
+  if (d.classList.contains('open')) { d.classList.remove('open'); }
+  else { renderNotifs(); d.classList.add('open'); }
+}
+function closeNotifDropdown() { document.getElementById('notif-dropdown')?.classList.remove('open'); }
+document.addEventListener('click', (e) => { if (!e.target.closest('#notif-dropdown') && !e.target.closest('#notif-trigger')) closeNotifDropdown(); });
+
+// Toast
+let toastEl;
+function showToast(msg, dur = 2400) {
+  if (!toastEl) { toastEl = document.createElement('div'); toastEl.className = 'toast'; document.body.appendChild(toastEl); }
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastEl._t);
+  toastEl._t = setTimeout(() => toastEl.classList.remove('show'), dur);
+}
+
+// Brand wordmark — align gold light on i
+function alignBrandLight() {
+  const text = document.getElementById('brand-text');
+  const lightGroup = document.getElementById('brand-light');
+  if (!text || !lightGroup) return;
+  const svg = text.ownerSVGElement;
+  const tmp = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  tmp.setAttribute('font-family', 'Newsreader, serif'); tmp.setAttribute('font-size', '38'); tmp.setAttribute('font-weight', '500'); tmp.setAttribute('letter-spacing', '-0.5'); tmp.style.visibility = 'hidden';
+  svg.appendChild(tmp);
+  tmp.textContent = 'Sent'; const sentEnd = tmp.getComputedTextLength();
+  tmp.textContent = 'Senti'; const sentiEnd = tmp.getComputedTextLength();
+  tmp.remove();
+  const iCenter = sentEnd + (sentiEnd - sentEnd) * 0.4;
+  lightGroup.setAttribute('transform', `translate(${(iCenter - 68).toFixed(2)}, 0)`);
+}
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(alignBrandLight);
+setTimeout(alignBrandLight, 600); setTimeout(alignBrandLight, 1500);
+
+// Guided tour
+const GUIDE_STEPS = [
+  { title: 'Vue portefeuille', desc: '25 portcos, KPIs ingérés automatiquement chaque mois. Code couleur par statut. Cliquez une carte pour entrer.', view: 'dashboard' },
+  { title: 'Boîte de réception', desc: 'Updates portcos parsées automatiquement (PDF, Excel, Notion, texte libre) avec score de confidence d\'extraction.', view: 'inbox' },
+  { title: 'Alertes automatiques', desc: 'Détection des signaux faibles : runway court, croissance en décélération, retard de reporting, écart vs plan.', view: 'anomalies' },
+  { title: 'Rapport LP', desc: 'Lettre trimestrielle générée à partir des données portfolio. Module SFDR intégré. Vous éditez puis exportez en PDF.', view: 'lp-report' }
+];
+let guideStep = 0;
+const guideEl = document.createElement('div');
+guideEl.className = 'guide';
+document.body.appendChild(guideEl);
+const reopenEl = document.createElement('div');
+reopenEl.className = 'guide-reopen';
+reopenEl.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
+reopenEl.addEventListener('click', () => { reopenEl.classList.remove('show'); renderGuide(); });
+document.body.appendChild(reopenEl);
+
+function renderGuide() {
+  const s = GUIDE_STEPS[guideStep];
+  if (currentView !== s.view) navigate(s.view);
+  guideEl.innerHTML = `
+    <div class="guide-step">${guideStep + 1} / ${GUIDE_STEPS.length} · Guide</div>
+    <div class="guide-title">${s.title}</div>
+    <div class="guide-desc">${s.desc}</div>
+    <div class="guide-foot">
+      <div class="guide-dots">${GUIDE_STEPS.map((_, i) => `<div class="guide-dot ${i === guideStep ? 'active' : ''}"></div>`).join('')}</div>
+      <div class="guide-actions">
+        <span class="guide-btn ghost" id="guide-close">Fermer</span>
+        ${guideStep > 0 ? '<span class="guide-btn ghost" id="guide-prev">Précédent</span>' : ''}
+        <span class="guide-btn primary" id="guide-next">Suivant</span>
+      </div>
+    </div>
+  `;
+  guideEl.classList.add('show');
+  document.getElementById('guide-close').addEventListener('click', closeGuide);
+  document.getElementById('guide-next').addEventListener('click', () => {
+    guideStep = (guideStep + 1) % GUIDE_STEPS.length;
+    renderGuide();
+  });
+  const prev = document.getElementById('guide-prev');
+  if (prev) prev.addEventListener('click', () => { guideStep--; renderGuide(); });
+}
+function closeGuide(done) {
+  guideEl.classList.remove('show');
+  if (!done) setTimeout(() => reopenEl.classList.add('show'), 200);
+}
+
+// Init
+navigate('dashboard');
+setTimeout(renderGuide, 600);
+</script>
+</body>
+</html>
