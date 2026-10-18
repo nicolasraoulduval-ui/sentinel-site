@@ -300,9 +300,9 @@ a { color: inherit; text-decoration: none; }
 
     <div class="sidebar-footer">
       <div class="user-card" onclick="openModal('user-menu')">
-        <div class="avatar">NR</div>
+        <div class="avatar">CM</div>
         <div class="user-info">
-          <div class="user-name">Nicolas Raoul-Duval</div>
+          <div class="user-name">Camille Martin</div>
           <div class="user-role">Investment Associate</div>
         </div>
       </div>
@@ -944,7 +944,7 @@ const SETTINGS_PANELS = {
   },
   equipe: () => {
     const TEAM = [
-      ['Nicolas Raoul-Duval', 'Investment Associate', 'NR', 'Admin', '#FBBF24', 'Vous'],
+      ['Camille Martin', 'Investment Associate', 'CM', 'Admin', '#FBBF24', 'Vous'],
       ['Sophie Lambert', 'General Partner', 'SL', 'Admin', '#7C2D12', 'Actif il y a 2h'],
       ['Théo Mercier', 'Managing Partner', 'TM', 'Admin', '#1E40AF', 'Actif il y a 30m'],
       ['Camille Dauphin', 'Principal', 'CD', 'Éditeur', '#166534', 'Actif hier'],
@@ -1144,8 +1144,8 @@ const MODALS = {
     title: 'Mon compte',
     body: `
       <div style="display:flex;align-items:center;gap:14px;padding-bottom:16px;border-bottom:1px solid var(--border);margin-bottom:16px">
-        <div class="avatar" style="width:48px;height:48px;font-size:16px">NR</div>
-        <div><div style="font-weight:600;font-size:15px">Nicolas Raoul-Duval</div><div style="color:var(--text-3);font-size:12.5px">nicolas@sequoia-emergence.fr · Investment Associate</div></div>
+        <div class="avatar" style="width:48px;height:48px;font-size:16px">CM</div>
+        <div><div style="font-weight:600;font-size:15px">Camille Martin</div><div style="color:var(--text-3);font-size:12.5px">camille@sequoia-emergence.fr · Investment Associate</div></div>
       </div>
       <div style="display:grid;gap:6px">
         ${['Mon profil','Préférences','Notifications email','Sécurité','Centre d’aide','API & développeurs'].map(it => `<div onclick="closeModal();showToast('${it}')" style="padding:10px 12px;border-radius:6px;cursor:pointer;font-size:13.5px" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='transparent'">${it}</div>`).join('')}
